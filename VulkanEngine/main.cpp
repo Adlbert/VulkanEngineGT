@@ -68,7 +68,7 @@ namespace ve {
 	static std::default_random_engine e{ 12345 };					//Für Zufallszahlen
 	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//Für Zufallszahlen
 
-	
+
 
 	//
 	// Wirf die Kist in die richtung der Kamera
@@ -78,24 +78,24 @@ namespace ve {
 		float force;
 		glm::vec3 direction;
 		bool charging;
+		bool moving;
 
 
 		virtual bool onKeyboard(veEvent event) {
 			static uint32_t cubeid = 0;
-			static double dt_press = 0;
 
 
-			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
-				force += event.dt * 100.0f;
+			if (!moving && event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
 				charging = true;
 				std::cout << "Space pressed" << std::endl;
 				return false;
 			}
 
-			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_RELEASE) {
+			if (!moving && event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_RELEASE) {
 				VECamera* camera = getSceneManagerPointer()->getCamera();
 				direction = camera->getTransform()[2];
 				std::cout << "Space released" << std::endl;
+				std::cout << "Space released" + std::to_string(force) << std::endl;
 				charging = false;
 				return false;
 			}
@@ -111,24 +111,30 @@ namespace ve {
 				g_time = 30;
 				g_score = 0;
 				getSceneManagerPointer()->getSceneNode("The Cube Parent")->setPosition(glm::vec3(d(e), 1.0f, d(e)));
-				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
 				return;
 			}
 			if (g_gameLost) return;
 
+			if (charging) {
+				force += event.dt;
+			}
+
 			if (!charging && force > 0) {
+				moving = true;
 				VESceneNode* cubeParent = getSceneManagerPointer()->getSceneNode("The Cube Parent");
 				VECamera* camera = getSceneManagerPointer()->getCamera();
-				float distance = glm::length(cubeParent->getWorldTransform()[0] - camera->getWorldTransform()[0]);
-				g_score += distance*10;
+				float distance = glm::length(cubeParent->getPosition() - camera->getPosition());
+				g_score += distance;
 
 
 				glm::vec3 eye = camera->getTransform()[0];
 				glm::vec3 v = direction * force;
 				cubeParent->multiplyTransform(glm::translate(glm::mat4(1.0f), v));
 				force -= event.dt;
-				if (force < 0)
+				if (force <= 0) {
 					force = 0;
+					moving = false;
+				}
 			}
 			g_time -= event.dt;
 			if (g_time <= 0) {
@@ -146,6 +152,7 @@ namespace ve {
 			force = 0;
 			direction = glm::vec3(0.0f, 0.0f, 0.0f);
 			charging = false;
+			moving = false;
 		};
 
 		///Destructor of class EventListenerCollision
