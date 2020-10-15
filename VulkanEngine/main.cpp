@@ -16,6 +16,7 @@ namespace ve {
 	uint32_t g_score = 0;				//derzeitiger Punktestand
 	double g_time = 30.0;				//zeit die noch übrig ist
 	bool g_gameLost = false;			//true... das Spiel wurde verloren
+	bool g_gameWon = false;
 	bool g_restart = false;			//true...das Spiel soll neu gestartet werden
 
 	//
@@ -30,7 +31,7 @@ namespace ve {
 
 			struct nk_context* ctx = pSubrender->getContext();
 
-			if (!g_gameLost) {
+			if (!g_gameLost && !g_gameWon) {
 				if (nk_begin(ctx, "", nk_rect(0, 0, 200, 170), NK_WINDOW_BORDER)) {
 					char outbuffer[100];
 					nk_layout_row_dynamic(ctx, 45, 1);
@@ -45,7 +46,10 @@ namespace ve {
 			else {
 				if (nk_begin(ctx, "", nk_rect(500, 500, 200, 170), NK_WINDOW_BORDER)) {
 					nk_layout_row_dynamic(ctx, 45, 1);
-					nk_label(ctx, "Game Over", NK_TEXT_LEFT);
+					if (g_gameLost)
+						nk_label(ctx, "Game Over", NK_TEXT_LEFT);
+					if (g_gameWon)
+						nk_label(ctx, "Game Won", NK_TEXT_LEFT);
 					if (nk_button_label(ctx, "Restart")) {
 						g_restart = true;
 					}
@@ -66,7 +70,7 @@ namespace ve {
 
 
 	static std::default_random_engine e{ 12345 };					//Für Zufallszahlen
-	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//Für Zufallszahlen
+	static std::uniform_real_distribution<> d{ -20.0f, 20.0f };		//Für Zufallszahlen
 
 
 
@@ -75,12 +79,20 @@ namespace ve {
 	//
 	class EventListenerThrow : public VEEventListener {
 
+	private:
 		float force;
 		glm::vec3 direction;
 		bool charging;
 		bool moving;
 
+		int getScore(float distance) {
+			int score = (-glm::pow(distance, 2)) + 1000;
+			if (score < 0)
+				score = 0;
+			return score;
+		}
 
+	protected:
 		virtual bool onKeyboard(veEvent event) {
 			static uint32_t cubeid = 0;
 
@@ -107,13 +119,15 @@ namespace ve {
 
 			if (g_restart) {
 				g_gameLost = false;
+				g_gameWon = false;
 				g_restart = false;
 				g_time = 30;
 				g_score = 0;
-				getSceneManagerPointer()->getSceneNode("The Cube Parent")->setPosition(glm::vec3(d(e), 1.0f, d(e)));
+				getSceneManagerPointer()->getSceneNode("The Cube Parent")->setPosition(glm::vec3(0.0f, 1.0f, 10.0f));
+				getSceneManagerPointer()->getSceneNode("The Rabit Parent")->setPosition(glm::vec3(d(e), 1.0f, d(e)));
 				return;
 			}
-			if (g_gameLost) return;
+			if (g_gameLost || g_gameWon) return;
 
 			if (charging) {
 				force += event.dt;
@@ -122,9 +136,11 @@ namespace ve {
 			if (!charging && force > 0) {
 				moving = true;
 				VESceneNode* cubeParent = getSceneManagerPointer()->getSceneNode("The Cube Parent");
+				VESceneNode* rabbitParent = getSceneManagerPointer()->getSceneNode("The Rabit Parent");
+
 				VECamera* camera = getSceneManagerPointer()->getCamera();
-				float distance = glm::length(cubeParent->getPosition() - camera->getPosition());
-				g_score += distance;
+				float distance = glm::length(cubeParent->getPosition() - rabbitParent->getPosition());
+				g_score = getScore(distance);
 
 
 				glm::vec3 eye = camera->getTransform()[0];
@@ -137,13 +153,18 @@ namespace ve {
 				}
 			}
 			g_time -= event.dt;
-			if (g_time <= 0) {
-				g_gameLost = true;
+			if (g_time <= 0 || g_score > 990) {
+				if (g_score > 990)
+					g_gameWon = true;
+				else
+					g_gameLost = true;
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
 			}
 
 		}
+
+
 
 
 	public:
@@ -207,6 +228,12 @@ namespace ve {
 			eParent = getSceneManagerPointer()->createSceneNode("The Cube Parent", pScene, glm::mat4(1.0));
 			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
 			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 10.0f)));
+			eParent->addChild(e1);
+
+			VESceneNode* rabbit1, * rabbitParent;
+			eParent = getSceneManagerPointer()->createSceneNode("The Rabit Parent", pScene, glm::mat4(1.0));
+			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Rabit", "media/models/test/crate1", "cube.obj"));
+			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(d(e), 1.0f, d(e))));
 			eParent->addChild(e1);
 		};
 	};
