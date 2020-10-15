@@ -202,17 +202,16 @@ int main() {
 	std::cout << "R:" << std::endl;
 	std::cout << glm::to_string(R) << std::endl;
 
-	glm::vec4 x_i[6] = {
+	glm::vec4 x_i[5] = {
 		glm::vec4(0, 0, 1, 0),
 		glm::vec4(6, 6, 6, 0),
 		glm::vec4(3, 3, 9, 0),
 		glm::vec4(9, 0, 4, 0),
 		glm::vec4(7, 5, 0, 0),
-		glm::vec4(9, 1, 5, 0),
 	};
 
 
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < 5; i++) {
 		std::cout << "" << std::endl;
 		std::cout << "Vector to translate:" << std::endl;
 		std::cout << glm::to_string(x_i[i]) << std::endl;
