@@ -201,8 +201,6 @@ namespace ve {
 			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
 			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 1.0f, 10.0f)));
 			eParent->addChild(e1);
-
-			m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
 		};
 	};
 
