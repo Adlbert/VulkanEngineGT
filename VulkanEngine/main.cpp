@@ -72,18 +72,34 @@ namespace ve {
 	//
 	// Manage spring force
 	//
-	class SpringForce : public VEEventListener {
+	class EventListenerSpringForce : public VEEventListener {
+		VESceneNode* cube;
+		float l0 = 0.0;
+
+		glm::vec4 hook(float l) {
+			return -glm::vec4(0.0, 0.0, 1.0, 0.0) * (l-l0);
+		}
+
 	protected:
-		virtual void onFrameStarted(veEvent event) {
-		
+		virtual void onFrameEnded(veEvent event) {
+			VECHECKPOINTER(cube = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Cube Parent"));
+			glm::vec3 positionCube = getSceneManagerPointer()->getSceneNode("The Cube Parent")->getPosition();
+			glm::vec3 positionAnker = getSceneManagerPointer()->getSceneNode("The Anker Parent")->getPosition();
+			float distance = glm::length(positionCube - positionAnker);
+			std::cout << distance << std::endl;
+			glm::vec4 translate = hook(distance);	//total translation
+			float speed = 1.0f;
+			glm::vec3 trans = speed * glm::vec3(translate.x, translate.y, translate.z);
+			cube->multiplyTransform(glm::translate(glm::mat4(1.0f), (float)event.dt * trans));
 		};
 
 	public:
 		///Constructor of class EventListenerCollision
-		SpringForce(std::string name) : VEEventListener(name) { };
+		EventListenerSpringForce(std::string name) : VEEventListener(name) {
+		};
 
 		///Destructor of class EventListenerCollision
-		virtual ~SpringForce() {};
+		virtual ~EventListenerSpringForce() {};
 	};
 
 	
@@ -101,7 +117,8 @@ namespace ve {
 		virtual void registerEventListeners() {
 			VEEngine::registerEventListeners();
 
-			registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY});
+			//registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY});
+			registerEventListener(new EventListenerSpringForce("SpringForce"), { veEvent::VE_EVENT_FRAME_ENDED});
 		};
 		
 
@@ -134,6 +151,10 @@ namespace ve {
 			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
 			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 10.0f)));
 			eParent->addChild(e1);
+
+			VESceneNode* aParent;
+			aParent = getSceneManagerPointer()->createSceneNode("The Anker Parent", pScene, glm::mat4(1.0));
+			aParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 10.0f)));
 
 			//m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
 		};
