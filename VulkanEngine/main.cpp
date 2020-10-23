@@ -75,15 +75,12 @@ namespace ve {
 	class EventListenerFriction : public VEEventListener {
 
 		const float g = 9.81;
-		float cube0speed;
-		float cube1speed;
-		float cube2speed;
-		float cube3speed;
+		float speed;
 
 		float getFF(float speed, float friction) {
 			float ff = g * friction;
 			if (speed <= ff)
-				ff = -speed;
+				ff = speed;
 			return ff;
 		}
 
@@ -96,6 +93,35 @@ namespace ve {
 
 			glm::vec3 trans;
 			glm::vec4 translate = glm::vec4(0.0, 0.0, 1.0, 0.0);
+
+			//Glass
+			float cube0speed;
+			//Eis
+			float cube1speed;
+			//Holz
+			float cube2speed;
+			//Stahl
+			float cube3speed;
+			cube0speed = cube1speed = cube2speed = cube3speed = speed;
+
+			cube0speed -= getFF(cube0speed, 0.94);
+			cube1speed -= getFF(cube1speed, 0.01);
+			cube2speed -= getFF(cube2speed, 0.25);
+			cube3speed -= getFF(cube3speed, 0.7);
+
+			if (cube0speed > 0) {
+				cube0speed -= getFF(cube0speed, 0.4);
+			}
+			if (cube1speed > 0) {
+				cube1speed -= getFF(cube1speed, 0.03);
+			}
+			if (cube2speed > 0) {
+				cube2speed -= getFF(cube2speed, 0.2);
+			}
+			if (cube3speed > 0) {
+				cube3speed -= getFF(cube3speed, 0.57);
+			}
+
 
 			trans = cube0speed * glm::vec3(translate.x, translate.y, translate.z);
 			cube0->multiplyTransform(glm::translate(glm::mat4(1.0f), (float)event.dt * trans));
@@ -114,10 +140,8 @@ namespace ve {
 			if (event.idata3 == GLFW_RELEASE)
 				return false;
 			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
-				cube0speed -= getFF(cube0speed, 0.94);
-				cube1speed -= getFF(cube1speed, 0.1);
-				cube2speed -= getFF(cube2speed, 0.3);
-				cube3speed -= getFF(cube3speed, 0.7);
+				speed += 1.0f;
+				std::cout << "SpeedForce:" + std::to_string(speed) << std::endl;
 			}
 			return true;
 		}
@@ -125,10 +149,7 @@ namespace ve {
 	public:
 		///Constructor of class EventListenerCollision
 		EventListenerFriction(std::string name) : VEEventListener(name) {
-			cube0speed = 6.0f;
-			cube1speed = 6.0f;
-			cube2speed = 6.0f;
-			cube3speed = 6.0f;
+			speed = 0.0f;
 		};
 
 		///Destructor of class EventListenerCollision
@@ -187,13 +208,13 @@ namespace ve {
 
 			VESceneNode* e1, * e1Parent;
 			e1Parent = getSceneManagerPointer()->createSceneNode("The Cube Parent1", pScene, glm::mat4(1.0));
-			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube1", "media/models/test/crate0", "cube.obj"));
+			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube1", "media/models/test/crate1", "cube.obj"));
 			e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-1.5f, 1.0f, 0.0f)));
 			e1Parent->addChild(e1);
 
 			VESceneNode* e2, * e2Parent;
 			e2Parent = getSceneManagerPointer()->createSceneNode("The Cube Parent2", pScene, glm::mat4(1.0));
-			VECHECKPOINTER(e2 = getSceneManagerPointer()->loadModel("The Cube2", "media/models/test/crate0", "cube.obj"));
+			VECHECKPOINTER(e2 = getSceneManagerPointer()->loadModel("The Cube2", "media/models/test/crate2", "cube.obj"));
 			e2Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 1.0f, 0.0f)));
 			e2Parent->addChild(e2);
 
