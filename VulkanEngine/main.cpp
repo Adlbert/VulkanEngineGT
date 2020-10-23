@@ -72,58 +72,67 @@ namespace ve {
 	//
 	// Manage spring force
 	//
-	class EventListenerSpringForce : public VEEventListener {
-		float l0;
-		float hookForce;
+	class EventListenerFriction : public VEEventListener {
 
-		float hook(float l) {
-			return -.5f * (l - l0);
-		}
+		const float g = 9.81;
+		float cube0speed;
+		float cube1speed;
+		float cube2speed;
+		float cube3speed;
 
-		float getDampen() {
-			return 0.0025f * hookForce;
+		float getFF(float speed, float friction) {
+			float ff = g * friction;
+			if (speed <= ff)
+				ff = -speed;
+			return ff;
 		}
 
 	protected:
 		virtual void onFrameEnded(veEvent event) {
-			VESceneNode* cube = cube = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Cube Parent");
-			glm::vec3 positionCube = getSceneManagerPointer()->getSceneNode("The Cube Parent")->getPosition();
-			glm::vec3 positionAnker = getSceneManagerPointer()->getSceneNode("The Anker Parent")->getPosition();
-			float l = glm::length(positionAnker - positionCube);
-			std::cout << l - l0 << std::endl;
+			VESceneNode* cube0 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Cube Parent0");
+			VESceneNode* cube1 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Cube Parent1");
+			VESceneNode* cube2 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Cube Parent2");
+			VESceneNode* cube3 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Cube Parent3");
 
-			hookForce += hook(l) - getDampen();
+			glm::vec3 trans;
+			glm::vec4 translate = glm::vec4(0.0, 0.0, 1.0, 0.0);
 
-			glm::vec4 hookDirection = glm::vec4(0.0, 1.0, 0.0, 0.0);
+			trans = cube0speed * glm::vec3(translate.x, translate.y, translate.z);
+			cube0->multiplyTransform(glm::translate(glm::mat4(1.0f), (float)event.dt * trans));
 
-			glm::vec3 trans = hookForce * glm::vec3(hookDirection.x, hookDirection.y, hookDirection.z);
-			cube->multiplyTransform(glm::translate(glm::mat4(1.0f), (float)event.dt * trans));
+			trans = cube1speed * glm::vec3(translate.x, translate.y, translate.z);
+			cube1->multiplyTransform(glm::translate(glm::mat4(1.0f), (float)event.dt * trans));
+
+			trans = cube2speed * glm::vec3(translate.x, translate.y, translate.z);
+			cube2->multiplyTransform(glm::translate(glm::mat4(1.0f), (float)event.dt * trans));
+
+			trans = cube3speed * glm::vec3(translate.x, translate.y, translate.z);
+			cube3->multiplyTransform(glm::translate(glm::mat4(1.0f), (float)event.dt * trans));
 		};
 
 		virtual bool onKeyboard(veEvent event) {
 			if (event.idata3 == GLFW_RELEASE)
 				return false;
 			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
-				hookForce -= 100;
+				cube0speed -= getFF(cube0speed, 0.94);
+				cube1speed -= getFF(cube1speed, 0.1);
+				cube2speed -= getFF(cube2speed, 0.3);
+				cube3speed -= getFF(cube3speed, 0.7);
 			}
 			return true;
 		}
 
 	public:
 		///Constructor of class EventListenerCollision
-		EventListenerSpringForce(std::string name) : VEEventListener(name) {
-			l0 = 20.0;
-			hookForce = 0.0f;
-			VESceneNode* pScene;
-			pScene = (VEEntity*)getSceneManagerPointer()->getSceneNode("Level 1");
-
-			VESceneNode* aParent;
-			aParent = getSceneManagerPointer()->createSceneNode("The Anker Parent", pScene, glm::mat4(1.0));
-			aParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 10.0f - l0, 10.0f)));
+		EventListenerFriction(std::string name) : VEEventListener(name) {
+			cube0speed = 6.0f;
+			cube1speed = 6.0f;
+			cube2speed = 6.0f;
+			cube3speed = 6.0f;
 		};
 
 		///Destructor of class EventListenerCollision
-		virtual ~EventListenerSpringForce() {};
+		virtual ~EventListenerFriction() {};
 	};
 
 
@@ -142,7 +151,7 @@ namespace ve {
 			VEEngine::registerEventListeners();
 
 			//registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY});
-			registerEventListener(new EventListenerSpringForce("SpringForce"), { veEvent::VE_EVENT_KEYBOARD, veEvent::VE_EVENT_FRAME_ENDED });
+			registerEventListener(new EventListenerFriction("Friction"), { veEvent::VE_EVENT_KEYBOARD, veEvent::VE_EVENT_FRAME_ENDED });
 		};
 
 
@@ -170,11 +179,30 @@ namespace ve {
 			VECHECKPOINTER(pE4 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Plane/plane_t_n_s.obj/plane/Entity_0"));
 			pE4->setParam(glm::vec4(1000.0f, 1000.0f, 0.0f, 0.0f));
 
-			VESceneNode* e1, * eParent;
-			eParent = getSceneManagerPointer()->createSceneNode("The Cube Parent", pScene, glm::mat4(1.0));
-			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
-			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 10.0f, 10.0f)));
-			eParent->addChild(e1);
+			VESceneNode* e0, * e0Parent;
+			e0Parent = getSceneManagerPointer()->createSceneNode("The Cube Parent0", pScene, glm::mat4(1.0));
+			VECHECKPOINTER(e0 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
+			e0Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-4.5f, 1.0f, 0.0f)));
+			e0Parent->addChild(e0);
+
+			VESceneNode* e1, * e1Parent;
+			e1Parent = getSceneManagerPointer()->createSceneNode("The Cube Parent1", pScene, glm::mat4(1.0));
+			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube1", "media/models/test/crate0", "cube.obj"));
+			e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-1.5f, 1.0f, 0.0f)));
+			e1Parent->addChild(e1);
+
+			VESceneNode* e2, * e2Parent;
+			e2Parent = getSceneManagerPointer()->createSceneNode("The Cube Parent2", pScene, glm::mat4(1.0));
+			VECHECKPOINTER(e2 = getSceneManagerPointer()->loadModel("The Cube2", "media/models/test/crate0", "cube.obj"));
+			e2Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 1.0f, 0.0f)));
+			e2Parent->addChild(e2);
+
+			VESceneNode* e3, * e3Parent;
+			e3Parent = getSceneManagerPointer()->createSceneNode("The Cube Parent3", pScene, glm::mat4(1.0));
+			VECHECKPOINTER(e3 = getSceneManagerPointer()->loadModel("The Cube3", "media/models/test/crate0", "cube.obj"));
+			e3Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(4.5f, 1.0f, 0.0f)));
+			e3Parent->addChild(e3);
+
 
 			//m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
 		};
