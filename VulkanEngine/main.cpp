@@ -68,58 +68,22 @@ namespace ve {
 	static std::default_random_engine e{ 12345 };					//Für Zufallszahlen
 	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//Für Zufallszahlen
 
+
 	//
-	// Überprüfen, ob die Kamera die Kiste berührt
+	// Manage spring force
 	//
-	class EventListenerCollision : public VEEventListener {
+	class SpringForce : public VEEventListener {
 	protected:
 		virtual void onFrameStarted(veEvent event) {
-			static uint32_t cubeid = 0;
-
-			if (g_restart) {
-				g_gameLost = false;
-				g_restart = false;
-				g_time = 30;
-				g_score = 0;
-				getSceneManagerPointer()->getSceneNode("The Cube Parent")->setPosition(glm::vec3(d(e), 1.0f, d(e)));
-				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
-				return;
-			}
-			if (g_gameLost) return;
-
-			glm::vec3 positionCube   = getSceneManagerPointer()->getSceneNode("The Cube Parent")->getPosition();
-			glm::vec3 positionCamera = getSceneManagerPointer()->getSceneNode("StandardCameraParent")->getPosition();
-
-			float distance = glm::length(positionCube - positionCamera);
-			if (distance < 1) {
-				g_score++;
-				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/explosion.wav", false);
-				if (g_score % 10 == 0) {
-					g_time = 30;
-					getEnginePointer()->m_irrklangEngine->play2D("media/sounds/bell.wav", false);
-				}
-
-				VESceneNode *eParent = getSceneManagerPointer()->getSceneNode("The Cube Parent");
-				eParent->setPosition(glm::vec3(d(e), 1.0f, d(e)));
-
-				getSceneManagerPointer()->deleteSceneNodeAndChildren("The Cube"+ std::to_string(cubeid));
-				VECHECKPOINTER(getSceneManagerPointer()->loadModel("The Cube"+ std::to_string(++cubeid)  , "media/models/test/crate0", "cube.obj", 0, eParent) );
-			}
-
-			g_time -= event.dt;
-			if (g_time <= 0) {
-				g_gameLost = true;
-				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
-				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
-			}
+		
 		};
 
 	public:
 		///Constructor of class EventListenerCollision
-		EventListenerCollision(std::string name) : VEEventListener(name) { };
+		SpringForce(std::string name) : VEEventListener(name) { };
 
 		///Destructor of class EventListenerCollision
-		virtual ~EventListenerCollision() {};
+		virtual ~SpringForce() {};
 	};
 
 	
@@ -137,7 +101,6 @@ namespace ve {
 		virtual void registerEventListeners() {
 			VEEngine::registerEventListeners();
 
-			registerEventListener(new EventListenerCollision("Collision"), { veEvent::VE_EVENT_FRAME_STARTED });
 			registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY});
 		};
 		
@@ -169,10 +132,10 @@ namespace ve {
 			VESceneNode *e1,*eParent;
 			eParent = getSceneManagerPointer()->createSceneNode("The Cube Parent", pScene, glm::mat4(1.0));
 			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
-			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 1.0f, 10.0f)));
+			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 10.0f)));
 			eParent->addChild(e1);
 
-			m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
+			//m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
 		};
 	};
 
