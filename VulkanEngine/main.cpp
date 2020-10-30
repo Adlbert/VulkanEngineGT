@@ -24,8 +24,6 @@ namespace ve {
 			if (pSubrender == nullptr) return;
 
 			struct nk_context * ctx = pSubrender->getContext();
-
-			nk_end(ctx);
 		}
 
 	public:
@@ -47,6 +45,22 @@ namespace ve {
 	protected:
 		virtual void onFrameStarted(veEvent event) {
 		};
+
+		virtual bool onKeyboard(veEvent event) {
+			if (event.idata3 == GLFW_RELEASE) return false;
+
+			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
+				VESceneNode* pScene = getSceneManagerPointer()->getSceneNode("Level 1");
+
+				VESceneNode* e1, * eParent;
+				eParent = getSceneManagerPointer()->createSceneNode("The Cube Parent", pScene, glm::mat4(1.0));
+				VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
+				eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 10.0f)));
+				eParent->addChild(e1);
+				return true;
+			}
+			return false;
+		}
 
 	public:
 		///Constructor of class EventListenerCollision
@@ -71,7 +85,7 @@ namespace ve {
 		virtual void registerEventListeners() {
 			VEEngine::registerEventListeners();
 
-			registerEventListener(new EventListenerThrowing("Throwing"), { veEvent::VE_EVENT_FRAME_STARTED });
+			registerEventListener(new EventListenerThrowing("Throwing"), { veEvent::VE_EVENT_FRAME_STARTED, veEvent::VE_EVENT_KEYBOARD });
 			registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY});
 		};
 		
