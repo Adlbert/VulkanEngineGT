@@ -8,6 +8,7 @@
 
 #include "VEInclude.h"
 
+#include "glm/gtx/matrix_cross_product.hpp"
 
 
 namespace ve {
@@ -42,6 +43,8 @@ namespace ve {
 	// Überprüfen, ob die Kamera die Kiste berührt
 	//
 	class EventListenerThrowing : public VEEventListener {
+		glm::vec4 angularMomentum;
+		glm::vec3 linearMomentum;
 		float upward;
 		bool cubeSpawned;
 		uint32_t cubeId;
@@ -50,33 +53,42 @@ namespace ve {
 		virtual void onFrameStarted(veEvent event) {
 			if (!cubeSpawned)
 				return;
-			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube Parent");
-			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Cube" + std::to_string(cubeId));
+			//could be input
+			//glm::vec3 force = glm::vec3(1, 0, 0);
 
-			float g = 9.81f;
-			glm::vec4 translate_gravity = glm::vec4(0.0, 0.0, 0.0, 1.0);
-			translate_gravity = e1->getTransform() * glm::vec4(0.0, -1.0, 0.0, 1.0);
-			glm::vec3 gravity = g * glm::vec3(translate_gravity.x, translate_gravity.y, translate_gravity.z);
+			//VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube Parent");
+			//VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Cube" + std::to_string(cubeId));
 
-			glm::vec4 translate_upward = glm::vec4(0.0, 0.0, 0.0, 1.0);
-			translate_upward = e1->getTransform() * glm::vec4(0.0, 1.0, 0.0, 1.0);
-			glm::vec3 trans_upward = upward * glm::vec3(translate_upward.x, translate_upward.y, translate_upward.z);
+			//glm::vec3 position = eParent->getPosition(); //in World Space
+			//glm::mat4 orientation = eParent->getTransform(); //in World 
+			////Assume that the objects center is its postion
+			//glm::vec4 center = glm::vec4(position.x, position.y, position.z, 1);
+			//float inertiaTensor = 1.0f; //assume interia tensor is 1
+			//float mass = 1.0f;
 
-			float forward = 20.0;
-			glm::vec4 translate_forward = glm::vec4(0.0, 0.0, 0.0, 1.0);
-			translate_forward = e1->getTransform() * glm::vec4(0.0, 0.0, 1, 1.0);
-			glm::vec3 trans_forward = forward * glm::vec3(translate_forward.x, translate_forward.y, translate_forward.z);
+			////// Kreuzprodukt von (dem Produkt zwischen orientierungsmatrix und center vector) und dem force vector.
+			//glm::vec3 torque = glm::cross(glm::vec3(orientation * center), force); 
+			//linearMomentum += (float)event.dt * mass * force; // mass * velocity; mass = 1;
+			//angularMomentum += (float)event.dt * torque; //es selbst plus delta time mal torque.
+			////orientierungsmatrix mal dem inversen inertia tensor mal der transponierten orientierungsmatrix mal dem angular momentum.
+			//glm::vec3 angularVelocity = orientation * inertiaTensor * glm::transpose(orientation) * angularMomentum;
+
+			//glm::mat3 rotate = rotate + float(event.dt) * glm::matrixCross3(angularVelocity) * rotate;
+
+			////rotationsmatrix R =  R + dt * matrixCross3(angular velocity) * R die noch normalisiert werden muss.
 
 
-			glm::vec4 rot4 = glm::vec4(1.0);
-			float rotSpeed = 0.1;
-			float angle = rotSpeed * (float)event.dt;
-			rot4 = e1->getTransform() * glm::vec4(0.0, 0.1, 0.0, 1.0);
-			glm::vec3  rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
-			glm::mat4  rotate = glm::rotate(glm::mat4(1.0), angle, rot3);
+			//float g = 9.81f;
+			//glm::vec4 translate_gravity = glm::vec4(0.0, 0.0, 0.0, 1.0);
+			//translate_gravity = e1->getTransform() * glm::vec4(0.0, -1.0, 0.0, 1.0);
+			//glm::vec3 gravity = g * glm::vec3(translate_gravity.x, translate_gravity.y, translate_gravity.z);
 
-			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), (float)event.dt * (trans_forward + gravity + trans_upward)));
-			e1->multiplyTransform(rotate);
+			//glm::vec4 translate_upward = glm::vec4(0.0, 0.0, 0.0, 1.0);
+			//translate_upward = e1->getTransform() * glm::vec4(0.0, 1.0, 0.0, 1.0);
+			//glm::vec3 trans_upward = upward * glm::vec3(translate_upward.x, translate_upward.y, translate_upward.z);
+
+			//eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), (float)event.dt * (linearMomentum + gravity + trans_upward)));
+			//e1->multiplyTransform(rotate);
 
 			if (upward > 0)
 				upward -= event.dt;
@@ -115,6 +127,7 @@ namespace ve {
 			cubeSpawned = false;
 			upward = 18.0f;
 			cubeId = 0;
+			angularMomentum = glm::vec4(0,0,0,0);
 		};
 
 		///Destructor of class EventListenerCollision
