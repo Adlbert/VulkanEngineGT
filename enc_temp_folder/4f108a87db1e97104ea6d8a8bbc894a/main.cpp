@@ -66,7 +66,7 @@ namespace ve {
 			float inertiaTensor = 1.0f; //assume interia tensor is 1
 			float mass = 1.0f;
 
-			force -= glm::vec3(0, .01, 0);
+			//force -= glm::vec3(0, .01, 0);
 			 
 			//// Kreuzprodukt von (dem Produkt zwischen orientierungsmatrix und center vector) und dem force vector.
 			glm::vec4 c = orientation * center;
