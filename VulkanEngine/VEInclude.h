@@ -33,6 +33,11 @@
 #include "VERenderer.h"
 #include "VERendererForward.h"
 
+//#include "collider.h"
+//#include "sat.h"
+//#include "gjk_epa.h"
+//#include "contact.h"
+//#include "hash.h"
 
 //use this macro to check the function result, if its not VK_SUCCESS then return the error
 #define VECHECKRESULT(x) { \

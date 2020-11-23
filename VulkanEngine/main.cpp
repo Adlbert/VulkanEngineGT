@@ -8,7 +8,9 @@
 
 #include "VEInclude.h"
 
-
+#include "sat.h"
+#include "gjk_epa.h"
+#include "contact.h"
 
 namespace ve {
 
