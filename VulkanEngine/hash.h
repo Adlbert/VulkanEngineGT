@@ -41,8 +41,8 @@ namespace gjk {
 	};
 
 	//hash of specific data types
-	//template<>
-	//struct std::hash<vec3> {
+	//template<contact>
+	//struct std::hash<contact> {
 	//	size_t operator()(const vec3& v) {
 	//		std::size_t seed = std::hash<float>()(v.x);
 	//		hash_combine(seed, v.y);

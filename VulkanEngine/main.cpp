@@ -50,17 +50,21 @@ namespace ve {
 		virtual void onFrameStarted(veEvent event) {
 			static uint32_t cubeid = 0;
 
-			glm::vec3 positionCamera = getSceneManagerPointer()->getSceneNode("StandardCameraParent")->getPosition();
-			glm::vec3 positionPlane   = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
+			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
+			glm::vec3 positionCube1 = getSceneManagerPointer()->getSceneNode("The Cube1 Parent")->getPosition();
 
-			gjk::Box ground{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 100.0f, 100.0f)) };
-			gjk::Box box{ positionCamera };
-			vec3 mtv(0, 1, 0); //minimum translation vector
 
-			bool hit = gjk::gjk(box, ground, mtv);
+			gjk::Box cube0{ positionCube0 };
+			gjk::Box cube1{ positionCube1 };
+			vec3 mtv(1, 0, 0); //minimum translation vector
+
+			bool hit = gjk::gjk(cube0, cube1, mtv);
 
 
 			if (hit) {
+				std::set<gjk::contact> ct;
+				vec3 mtv(1, 0, 0);
+				gjk::contacts(cube0, cube1, mtv, ct);
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
 			}
@@ -74,7 +78,43 @@ namespace ve {
 		virtual ~EventListenerCollision() {};
 	};
 
-	
+	//
+// Überprüfen, ob die Kamera die Kiste berührt
+//
+	class EventListenerKeyboard : public VEEventListener {
+		glm::vec3 linearMomentum;
+		glm::vec3 force;
+
+	protected:
+		virtual void onFrameStarted(veEvent event) {
+			static uint32_t cubeid = 0;
+			float mass = 1.0f;
+
+			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
+			linearMomentum += (float)event.dt * mass * force;
+			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum));
+			linearMomentum -= (float)event.dt * mass * force;
+		};
+
+		virtual bool onKeyboard(veEvent event) {
+			if (event.idata3 == GLFW_RELEASE) return false;
+
+			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
+				force = glm::vec3(10, 0, 0);
+			}
+		}
+
+	public:
+		///Constructor of class EventListenerCollision
+		EventListenerKeyboard(std::string name) : VEEventListener(name) { 
+			linearMomentum = glm::vec3(0, 0, 0);
+			force = glm::vec3(0, 0, 0);
+		};
+
+		///Destructor of class EventListenerCollision
+		virtual ~EventListenerKeyboard() {};
+	};
+
 
 	///user defined manager class, derived from VEEngine
 	class MyVulkanEngine : public VEEngine {
@@ -90,6 +130,7 @@ namespace ve {
 			VEEngine::registerEventListeners();
 
 			registerEventListener(new EventListenerCollision("Collision"), { veEvent::VE_EVENT_FRAME_STARTED });
+			registerEventListener(new EventListenerKeyboard("Keyboard"), { veEvent::VE_EVENT_FRAME_STARTED, veEvent::VE_EVENT_KEYBOARD });
 			registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY});
 		};
 		
@@ -118,11 +159,17 @@ namespace ve {
 			VECHECKPOINTER( pE4 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Plane/plane_t_n_s.obj/plane/Entity_0") );
 			pE4->setParam( glm::vec4(1000.0f, 1000.0f, 0.0f, 0.0f) );
 
-			VESceneNode *e1,*eParent;
-			eParent = getSceneManagerPointer()->createSceneNode("The Cube Parent", pScene, glm::mat4(1.0));
+			VESceneNode *e1,*e1Parent;
+			e1Parent = getSceneManagerPointer()->createSceneNode("The Cube0 Parent", pScene, glm::mat4(1.0));
 			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
-			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 1.0f, 10.0f)));
-			eParent->addChild(e1);
+			e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f, 1.0f, 10.0f)));
+			e1Parent->addChild(e1);
+
+			VESceneNode* e2, * e2Parent;
+			e2Parent = getSceneManagerPointer()->createSceneNode("The Cube1 Parent", pScene, glm::mat4(1.0));
+			VECHECKPOINTER(e2 = getSceneManagerPointer()->loadModel("The Cube1", "media/models/test/crate0", "cube.obj"));
+			e2Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 1.0f, 10.0f)));
+			e2Parent->addChild(e2);
 
 			m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
 		};

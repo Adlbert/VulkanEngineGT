@@ -20,21 +20,59 @@ namespace gjk {
 
 	using vec3pair = std::pair<vec3, vec3>;
 
+	enum ContactType {
+		VertexCT,
+		EdgeCT,
+		FaceCT
+	};
 
 	struct contact {
+		ContactType type;
 		Polytope* obj1;
 		Polytope* obj2;
 		vec3 pos;
 		vec3 normal;
 
-		bool operator<(const contact& rhs) const noexcept {
-			return glm::length(this->pos) < glm::length(rhs.pos);
-		}
-		bool operator==(const contact& rhs)const noexcept {
-			return this->pos == rhs.pos;
+		virtual bool operator<(const contact& rhs) const {
+			if (this->type == rhs.type) {
+				if (this->obj1 == rhs.obj1) {
+					if (this->obj2 == rhs.obj2) {
+						if (this->pos == rhs.pos) {
+							if (this->normal == rhs.normal) {
+								return false;
+							}
+							return glm::dot(this->normal, rhs.normal) < -1;
+						}
+						if (this->pos.x == rhs.pos.x) {
+							if (this->pos.y == rhs.pos.y) {
+								if (this->pos.z == rhs.pos.z) {
+									return this->pos.z < rhs.pos.z;
+								}
+							}
+							return this->pos.y < rhs.pos.y;
+						}
+						return this->pos.x < rhs.pos.x;
+					}
+					return this->obj2 < rhs.obj2;
+				}
+				return this->obj1 < rhs.obj1;
+			}
+			return this->type < rhs.type;
 		}
 	};
 
+	struct vertext_contact : contact {
+	};
+
+	struct edge_contact : contact {
+		int edge1;
+		int edge2;
+	};
+
+	struct face_contact : contact {
+		int face1;
+		int face2;
+	};
 
 	/*template<>
 	struct std::hash<face_contact> {
@@ -43,50 +81,76 @@ namespace gjk {
 	   }
 	};*/
 
-	void create_vertex_face_contact(Polytope& obj1, Polytope& obj2, glm::vec3 pos, int f2, std::set<contact>& contacts) {
-		contact contact;
+	void create_vertex_contact(Polytope& obj1, Polytope& obj2, glm::vec3 pos, int f2, std::set<contact>& contacts) {
+		vertext_contact contact;
+		contact.type = VertexCT;
 		contact.obj1 = &obj1;
 		contact.obj2 = &obj2;
 		contact.pos = pos;
-		contact.normal = obj1.get_face_normal(f2);
+		contact.normal = obj2.get_face_normal(f2);
+		if (contact.normal == vec3(0, 1, 0))
+			std::cout << "whoops";
 		contacts.insert(contact);
+	}
+
+	void create_edge_contact(Polytope& obj1, Polytope& obj2, Line& edge, glm::vec3 pos, int f2, std::set<contact>& contacts) {
+		edge_contact contact;
+		contact.type = EdgeCT;
+		contact.obj1 = &obj1;
+		contact.obj2 = &obj2;
+		contact.pos = pos;
+		contact.edge1 = 0;
+
+		contact.edge2 = 1;
+		contact.normal = obj1.get_face_normal(f2);
+
+		//contacts.insert(contact);
+	}
+
+	void create_face_contact(Polytope& obj1, Polytope& obj2, Face& face, glm::vec3 pos, int f2, std::set<contact>& contacts) {
+		face_contact contact;
+		contact.type = FaceCT;
+		contact.obj1 = &obj1;
+		contact.obj2 = &obj2;
+		contact.pos = pos;
+		contact.face1 = f2;
+		contact.face2 = f2;
+		contact.normal = obj1.get_face_normal(f2);
+		//contacts.insert(contact);
 	}
 
 
 	void process_vertex_face_contact(Polytope& obj1, Polytope& obj2, int v1, int f2, std::set<contact>& contacts) {
-		create_vertex_face_contact(obj1, obj2, obj1.m_points[v1], f2, contacts);
+		create_vertex_contact(obj1, obj2, obj1.m_points[v1], f2, contacts);
+
+		create_face_contact(obj1, obj2, obj1.m_faces[f2], obj1.m_points[v1], f2, contacts);
 		std::vector<Line> obj1Edges;
 		obj1.get_edges(obj1Edges);
 		//Go through each point on the edge and add it to contacts
 		std::for_each(std::begin(obj1Edges), std::end(obj1Edges),
 			[&](Line l) {
 			//if Start or endpoint are equal to initial contact point
-			//go by steps of 0.5. Determines the precision.
 			float stepsize = .5f;
 			glm::vec3 line_end = l.m_pos + l.m_dir;
 			glm::vec3 n_dir = glm::normalize(l.m_dir);
 			if (l.m_pos == obj1.m_points[v1]) {
-				// for(glm::vec3 p = l.m_pos; glm::distance(p,line_end) > stepsize; p+=n_dir*stepsize){
-				create_vertex_face_contact(obj1, obj2, l.m_pos, f2, contacts);
-				// }
+				create_edge_contact(obj1, obj2, l, obj1.m_points[v1], f2, contacts);
 			}
 			if (line_end == obj1.m_points[v1]) {
-				// for(glm::vec3 p = l.m_pos; glm::distance(p,line_end) > stepsize; p+=n_dir*stepsize){
-				create_vertex_face_contact(obj1, obj2, line_end
-					, f2, contacts);
-				// }
+				create_edge_contact(obj1, obj2, l, obj1.m_points[v1], f2, contacts);
 			}
 		});
 	}
 
 	void process_edge_edge_contact(Line& edge1, Line& edge2, std::set<contact>& contacts) {
-		contact contact;
-		contact.normal = glm::cross(edge1.m_dir, edge2.m_dir);
+		edge_contact contact;
+		contact.type = EdgeCT;
 		contact.pos = edge1.intersect(edge2);
-		// if (!isnan(contact.pos.x) &&
-		//     !isnan(contact.pos.y) &&
-		//     !isnan(contact.pos.z))
-		contacts.insert(contact);
+		contact.edge1 = 1;
+		contact.edge2 = 2;
+		contact.normal = glm::cross(edge1.m_dir, edge2.m_dir);
+		//contacts.insert(contact);
+
 	}
 
 	//test a pair of faces against each other.
@@ -96,7 +160,7 @@ namespace gjk {
 		, int f1, int f2, std::set<contact>& contacts) {
 
 		Face& face1 = obj1.m_faces[f1];
-		Face& face2 = obj1.m_faces[f2];
+		Face& face2 = obj2.m_faces[f2];
 
 		for (int v1 : face1.m_data->m_vertices) {      //go through all vertices of face 1
 			if (sat(obj1.m_vertices[v1], face2, dir)) {

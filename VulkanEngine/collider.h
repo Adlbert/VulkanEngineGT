@@ -269,7 +269,7 @@ namespace gjk {
 			vec3 furthest_point = m_points[0];
 			float max_dot = dot(furthest_point, dir);
 
-			auto start = std::chrono::high_resolution_clock::now();
+			//auto start = std::chrono::high_resolution_clock::now();
 
 
 			if (true) {           // if( neighbors == nullptr ) {//  //replace the if statement so this branch is only taken if no neighbor info available
