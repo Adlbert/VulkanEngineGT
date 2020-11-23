@@ -25,37 +25,9 @@ namespace ve {
 	//
 	class EventListenerGUI : public VEEventListener {
 	protected:
+
 		
 		virtual void onDrawOverlay(veEvent event) {
-			VESubrenderFW_Nuklear * pSubrender = (VESubrenderFW_Nuklear*)getRendererPointer()->getOverlay();
-			if (pSubrender == nullptr) return;
-
-			struct nk_context * ctx = pSubrender->getContext();
-
-			if (!g_gameLost) {
-				if (nk_begin(ctx, "", nk_rect(0, 0, 200, 170), NK_WINDOW_BORDER )) {
-					char outbuffer[100];
-					nk_layout_row_dynamic(ctx, 45, 1);
-					sprintf(outbuffer, "Score: %03d", g_score);
-					nk_label(ctx, outbuffer, NK_TEXT_LEFT);
-
-					nk_layout_row_dynamic(ctx, 45, 1);
-					sprintf(outbuffer, "Time: %004.1lf", g_time);
-					nk_label(ctx, outbuffer, NK_TEXT_LEFT);
-				}
-			}
-			else {
-				if (nk_begin(ctx, "", nk_rect(500, 500, 200, 170), NK_WINDOW_BORDER )) {
-					nk_layout_row_dynamic(ctx, 45, 1);
-					nk_label(ctx, "Game Over", NK_TEXT_LEFT);
-					if (nk_button_label(ctx, "Restart")) {
-						g_restart = true;
-					}
-				}
-
-			};
-
-			nk_end(ctx);
 		}
 
 	public:
@@ -78,39 +50,17 @@ namespace ve {
 		virtual void onFrameStarted(veEvent event) {
 			static uint32_t cubeid = 0;
 
-			if (g_restart) {
-				g_gameLost = false;
-				g_restart = false;
-				g_time = 30;
-				g_score = 0;
-				getSceneManagerPointer()->getSceneNode("The Cube Parent")->setPosition(glm::vec3(d(e), 1.0f, d(e)));
-				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
-				return;
-			}
-			if (g_gameLost) return;
-
-			glm::vec3 positionCube   = getSceneManagerPointer()->getSceneNode("The Cube Parent")->getPosition();
 			glm::vec3 positionCamera = getSceneManagerPointer()->getSceneNode("StandardCameraParent")->getPosition();
+			glm::vec3 positionPlane   = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
 
-			float distance = glm::length(positionCube - positionCamera);
-			if (distance < 1) {
-				g_score++;
-				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/explosion.wav", false);
-				if (g_score % 10 == 0) {
-					g_time = 30;
-					getEnginePointer()->m_irrklangEngine->play2D("media/sounds/bell.wav", false);
-				}
+			gjk::Box ground{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 100.0f, 100.0f)) };
+			gjk::Box box{ positionCamera };
+			vec3 mtv(0, 1, 0); //minimum translation vector
 
-				VESceneNode *eParent = getSceneManagerPointer()->getSceneNode("The Cube Parent");
-				eParent->setPosition(glm::vec3(d(e), 1.0f, d(e)));
+			bool hit = gjk::gjk(box, ground, mtv);
 
-				getSceneManagerPointer()->deleteSceneNodeAndChildren("The Cube"+ std::to_string(cubeid));
-				VECHECKPOINTER(getSceneManagerPointer()->loadModel("The Cube"+ std::to_string(++cubeid)  , "media/models/test/crate0", "cube.obj", 0, eParent) );
-			}
 
-			g_time -= event.dt;
-			if (g_time <= 0) {
-				g_gameLost = true;
+			if (hit) {
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
 			}

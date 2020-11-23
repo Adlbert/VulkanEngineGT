@@ -272,7 +272,7 @@ namespace gjk {
 			auto start = std::chrono::high_resolution_clock::now();
 
 
-			if (false) {           // if( neighbors == nullptr ) {//  //replace the if statement so this branch is only taken if no neighbor info available
+			if (true) {           // if( neighbors == nullptr ) {//  //replace the if statement so this branch is only taken if no neighbor info available
 				std::for_each(std::begin(m_points), std::end(m_points),
 					[&](auto& v) {
 					float d = dot(v, dir);
@@ -303,11 +303,11 @@ namespace gjk {
 				} while (climbing);
 			}
 
-			auto finish = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double> elapsed = finish - start;
-			std::cout << "Elapsed time: " << elapsed.count() << " s\n";
-			thistime += elapsed.count();
-			std::cout << "Sumed up: " << thistime << " s\n";
+			//auto finish = std::chrono::high_resolution_clock::now();
+			//std::chrono::duration<double> elapsed = finish - start;
+			//std::cout << "Elapsed time: " << elapsed.count() << " s\n";
+			//thistime += elapsed.count();
+			//std::cout << "Sumed up: " << thistime << " s\n";
 
 			vec3 result = m_matRS * furthest_point + m_pos; //convert support to world space
 			return result;
