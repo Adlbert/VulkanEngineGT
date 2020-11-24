@@ -272,7 +272,7 @@ namespace gjk {
 			//auto start = std::chrono::high_resolution_clock::now();
 
 
-			if (true) {           // if( neighbors == nullptr ) {//  //replace the if statement so this branch is only taken if no neighbor info available
+			if (false) {           // if( neighbors == nullptr ) {//  //replace the if statement so this branch is only taken if no neighbor info available
 				std::for_each(std::begin(m_points), std::end(m_points),
 					[&](auto& v) {
 					float d = dot(v, dir);
