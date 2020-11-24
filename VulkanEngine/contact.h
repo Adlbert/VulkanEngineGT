@@ -37,19 +37,10 @@ namespace gjk {
 
 		virtual bool operator<(const contact& rhs) const {
 			if (this->type == rhs.type) {
-				if (this->obj1 == rhs.obj1) {
-					if (this->obj2 == rhs.obj2) {
-						if (this->pos_in_obj1 == rhs.pos_in_obj1) {
-							//if (this->face == rhs.face) {
-							return false;
-							//}
-							//return this->face < rhs.face;
-						}
-						return this->pos_in_obj1 > rhs.pos_in_obj1;
-					}
-					return this->obj2 < rhs.obj2;
+				if (this->pos_in_obj1 == rhs.pos_in_obj1) {
+					return false;
 				}
-				return this->obj1 < rhs.obj1;
+				return this->pos_in_obj1 > rhs.pos_in_obj1;
 			}
 			return this->type < rhs.type;
 		}
@@ -108,30 +99,30 @@ namespace gjk {
 		contact.pos_in_obj1 = v1;
 		contact.face_in_obj2 = f2;
 		contact.normal = obj1.get_face_normal(f2);
-		//contacts.insert(contact);
+		contacts.insert(contact);
 	}
 
 
 	void process_vertex_face_contact(Polytope& obj1, Polytope& obj2, int v1, int f2, std::set<contact>& contacts) {
 		create_vertex_contact(obj1, obj2, v1, f2, contacts);
 
-		//create_face_contact(obj1, obj2, v1, f2, contacts);
-		//std::vector<Line> obj1Edges;
-		//obj1.get_edges(obj1Edges);
+		create_face_contact(obj1, obj2, v1, f2, contacts);
+		std::vector<Line> obj1Edges;
+		obj1.get_edges(obj1Edges);
 		//Go through each point on the edge and add it to contacts
-		//std::for_each(std::begin(obj1Edges), std::end(obj1Edges),
-		//	[&](Line l) {
-		//	//if Start or endpoint are equal to initial contact point
-		//	float stepsize = .5f;
-		//	glm::vec3 line_end = l.m_pos + l.m_dir;
-		//	glm::vec3 n_dir = glm::normalize(l.m_dir);
-		//	if (l.m_pos == obj1.m_points[v1]) {
-		//		create_edge_contact(obj1, obj2, l, v1, f2, contacts);
-		//	}
-		//	if (line_end == obj1.m_points[v1]) {
-		//		create_edge_contact(obj1, obj2, l, v1, f2, contacts);
-		//	}
-		//});
+		std::for_each(std::begin(obj1Edges), std::end(obj1Edges),
+			[&](Line l) {
+			//if Start or endpoint are equal to initial contact point
+			float stepsize = .5f;
+			glm::vec3 line_end = l.m_pos + l.m_dir;
+			glm::vec3 n_dir = glm::normalize(l.m_dir);
+			if (l.m_pos == obj1.m_points[v1]) {
+				create_edge_contact(obj1, obj2, l, v1, f2, contacts);
+			}
+			if (line_end == obj1.m_points[v1]) {
+				create_edge_contact(obj1, obj2, l, v1, f2, contacts);
+			}
+		});
 	}
 
 	void process_edge_edge_contact(Line& edge1, Line& edge2, std::set<contact>& contacts) {
@@ -141,7 +132,7 @@ namespace gjk {
 		contact.edge1 = 1;
 		contact.edge2 = 2;
 		contact.normal = glm::cross(edge1.m_dir, edge2.m_dir);
-		//contacts.insert(contact);
+		contacts.insert(contact);
 
 	}
 
