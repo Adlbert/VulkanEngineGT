@@ -32,20 +32,20 @@ namespace gjk {
 		Polytope* obj2;
 		vec3 pos;
 		vec3 normal;
-		int face;
-		int pos_i;
+		int face_in_obj2;
+		int pos_in_obj1;
 
 		virtual bool operator<(const contact& rhs) const {
 			if (this->type == rhs.type) {
 				if (this->obj1 == rhs.obj1) {
 					if (this->obj2 == rhs.obj2) {
-						if (this->pos_i == rhs.pos_i) {
-							if (this->face == rhs.face) {
-								return false;
-							}
-							return this->face < rhs.face;
+						if (this->pos_in_obj1 == rhs.pos_in_obj1) {
+							//if (this->face == rhs.face) {
+							return false;
+							//}
+							//return this->face < rhs.face;
 						}
-						return this->pos_i > rhs.pos_i;
+						return this->pos_in_obj1 > rhs.pos_in_obj1;
 					}
 					return this->obj2 < rhs.obj2;
 				}
@@ -78,8 +78,8 @@ namespace gjk {
 		contact.type = VertexCT;
 		contact.obj1 = &obj1;
 		contact.obj2 = &obj2;
-		contact.pos_i = v1;
-		contact.face = f2;
+		contact.pos_in_obj1 = v1;
+		contact.face_in_obj2 = f2;
 		contact.pos = obj1.m_points[v1];
 		contact.normal = obj2.get_face_normal(f2);
 		contacts.insert(contact);
@@ -91,8 +91,8 @@ namespace gjk {
 		contact.obj1 = &obj1;
 		contact.obj2 = &obj2;
 		contact.pos = obj1.m_points[v1];
-		contact.pos_i = v1;
-		contact.face = f2;
+		contact.pos_in_obj1 = v1;
+		contact.face_in_obj2 = f2;
 		contact.edge1 = 0;
 		contact.edge2 = 1;
 		contact.normal = obj1.get_face_normal(f2);
@@ -105,8 +105,8 @@ namespace gjk {
 		contact.obj1 = &obj1;
 		contact.obj2 = &obj2;
 		contact.pos = obj1.m_points[v1];
-		contact.pos_i = v1;
-		contact.face = f2;
+		contact.pos_in_obj1 = v1;
+		contact.face_in_obj2 = f2;
 		contact.normal = obj1.get_face_normal(f2);
 		//contacts.insert(contact);
 	}
@@ -189,6 +189,8 @@ namespace gjk {
 
 		for (int f1 : obj1_faces) {             // go through all face-face pairs
 			for (int f2 : obj2_faces) {
+				//this is always true
+				//bc previous already testes if faces touch
 				if (sat(obj1.m_faces[f1], obj2.m_faces[f2], dir)) {           //only if the faces actually touch - can also drop this if statement
 					process_face_face_contact(obj1, obj2, dir, f1, f2, contacts); //compare all vertices and edges in the faces
 				}

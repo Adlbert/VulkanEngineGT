@@ -26,7 +26,7 @@ namespace ve {
 	class EventListenerGUI : public VEEventListener {
 	protected:
 
-		
+
 		virtual void onDrawOverlay(veEvent event) {
 		}
 
@@ -58,13 +58,15 @@ namespace ve {
 			gjk::Box cube1{ positionCube1 };
 			vec3 mtv(1, 0, 0); //minimum translation vector
 
-			bool hit = gjk::gjk(cube0, cube1, mtv);
+			bool hit = gjk::sat(cube0, cube1, mtv);
 
 
 			if (hit) {
 				std::set<gjk::contact> ct;
 				vec3 mtv(1, 0, 0);
+				//cube0.m_pos += mtv;
 				gjk::contacts(cube0, cube1, mtv, ct);
+
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
 			}
@@ -106,7 +108,7 @@ namespace ve {
 
 	public:
 		///Constructor of class EventListenerCollision
-		EventListenerKeyboard(std::string name) : VEEventListener(name) { 
+		EventListenerKeyboard(std::string name) : VEEventListener(name) {
 			linearMomentum = glm::vec3(0, 0, 0);
 			force = glm::vec3(0, 0, 0);
 		};
@@ -120,46 +122,46 @@ namespace ve {
 	class MyVulkanEngine : public VEEngine {
 	public:
 
-		MyVulkanEngine( bool debug=false) : VEEngine(debug) {};
+		MyVulkanEngine(bool debug = false) : VEEngine(debug) {};
 		~MyVulkanEngine() {};
 
 
 		///Register an event listener to interact with the user
-		
+
 		virtual void registerEventListeners() {
 			VEEngine::registerEventListeners();
 
 			registerEventListener(new EventListenerCollision("Collision"), { veEvent::VE_EVENT_FRAME_STARTED });
 			registerEventListener(new EventListenerKeyboard("Keyboard"), { veEvent::VE_EVENT_FRAME_STARTED, veEvent::VE_EVENT_KEYBOARD });
-			registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY});
+			registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY });
 		};
-		
+
 
 		///Load the first level into the game engine
 		///The engine uses Y-UP, Left-handed
-		virtual void loadLevel( uint32_t numLevel=1) {
+		virtual void loadLevel(uint32_t numLevel = 1) {
 
-			VEEngine::loadLevel(numLevel );			//create standard cameras and lights
+			VEEngine::loadLevel(numLevel);			//create standard cameras and lights
 
-			VESceneNode *pScene;
-			VECHECKPOINTER( pScene = getSceneManagerPointer()->createSceneNode("Level 1", getRoot()) );
-	
+			VESceneNode* pScene;
+			VECHECKPOINTER(pScene = getSceneManagerPointer()->createSceneNode("Level 1", getRoot()));
+
 			//scene models
 
-			VESceneNode *sp1;
-			VECHECKPOINTER( sp1 = getSceneManagerPointer()->createSkybox("The Sky", "media/models/test/sky/cloudy",
-										{	"bluecloud_ft.jpg", "bluecloud_bk.jpg", "bluecloud_up.jpg", 
-											"bluecloud_dn.jpg", "bluecloud_rt.jpg", "bluecloud_lf.jpg" }, pScene)  );
+			VESceneNode* sp1;
+			VECHECKPOINTER(sp1 = getSceneManagerPointer()->createSkybox("The Sky", "media/models/test/sky/cloudy",
+				{ "bluecloud_ft.jpg", "bluecloud_bk.jpg", "bluecloud_up.jpg",
+					"bluecloud_dn.jpg", "bluecloud_rt.jpg", "bluecloud_lf.jpg" }, pScene));
 
-			VESceneNode *e4;
-			VECHECKPOINTER( e4 = getSceneManagerPointer()->loadModel("The Plane", "media/models/test", "plane_t_n_s.obj",0, pScene) );
+			VESceneNode* e4;
+			VECHECKPOINTER(e4 = getSceneManagerPointer()->loadModel("The Plane", "media/models/test", "plane_t_n_s.obj", 0, pScene));
 			e4->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f, 1.0f, 1000.0f)));
 
-			VEEntity *pE4;
-			VECHECKPOINTER( pE4 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Plane/plane_t_n_s.obj/plane/Entity_0") );
-			pE4->setParam( glm::vec4(1000.0f, 1000.0f, 0.0f, 0.0f) );
+			VEEntity* pE4;
+			VECHECKPOINTER(pE4 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Plane/plane_t_n_s.obj/plane/Entity_0"));
+			pE4->setParam(glm::vec4(1000.0f, 1000.0f, 0.0f, 0.0f));
 
-			VESceneNode *e1,*e1Parent;
+			VESceneNode* e1, * e1Parent;
 			e1Parent = getSceneManagerPointer()->createSceneNode("The Cube0 Parent", pScene, glm::mat4(1.0));
 			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
 			e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f, 1.0f, 10.0f)));
