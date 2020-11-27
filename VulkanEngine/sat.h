@@ -80,7 +80,7 @@ namespace gjk {
 			dir = dir - (1.0f + f)  * r;
 
 			++loop;
-			f = std::max(f * 0.97f, 0.8f);   //apply damping to prevent small gaps from oscillating forever
+			f = std::max(f * 0.97f, 0.5f);   //apply damping to prevent small gaps from oscillating forever
 		}
 		std::cout << "Loops: " << loop << std::endl;
 		return sat_axis_test(obj1, obj2, dir, r, d);

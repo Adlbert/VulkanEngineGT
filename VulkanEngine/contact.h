@@ -39,10 +39,13 @@ namespace gjk {
 
 		virtual bool operator<(const contact& rhs) const {
 			if (this->type == rhs.type) {
-				if (this->pos_in_obj1 == rhs.pos_in_obj1) {
-					return false;
+				if (this->face_in_obj1 == rhs.face_in_obj1) {
+					if (this->pos_in_obj1 == rhs.pos_in_obj1) {
+						return false;
+					}
+					return this->pos_in_obj1 < rhs.pos_in_obj1;
 				}
-				return this->pos_in_obj1 > rhs.pos_in_obj1;
+				return this->face_in_obj1 < rhs.face_in_obj1;
 			}
 			return this->type < rhs.type;
 		}
@@ -67,13 +70,13 @@ namespace gjk {
 		contacts.insert(contact);
 	}
 
-	void process_edge_edge_contact(Line& edge1, Line& edge2, int f1, int f2, std::set<contact>& contacts) {
+	void process_edge_edge_contact(Line& edge1, Line& edge2, int f1, int f2, int e1, int e2, std::set<contact>& contacts) {
 		contact contact;
 		contact.type = Edge_Edge_Contact;
 		contact.pos = edge1.m_pos;
 		contact.edge1 = &edge1;
 		contact.edge2 = &edge2;
-		contact.pos_in_obj1 = f1+f2;	//need to set something to make them distinguishable
+		contact.pos_in_obj1 = e1;	//need to set something to make them distinguishable
 		contact.face_in_obj1 = f1;
 		contact.face_in_obj2 = f2;
 		contact.normal = glm::cross(edge1.m_dir, edge2.m_dir);
@@ -106,12 +109,19 @@ namespace gjk {
 		face1.get_edges(edges1);
 		face2.get_edges(edges2);
 
+		int v1 = face1.m_data->m_vertices[0];
+		int v2 = face2.m_data->m_vertices[0];
+
+		int e1 = 0;
 		for (auto& edge1 : edges1) {      //go through all edge pairs
+			int e2 = 0;
 			for (auto& edge2 : edges2) {
 				if (sat(edge1, edge2, dir)) {
-					process_edge_edge_contact(edge1, edge2, f1, f2, contacts);
+					process_edge_edge_contact(edge1, edge2, f1, f2, e1, e2, contacts);
 				}
+				e2++;
 			}
+			e1++;
 		}
 	}
 
