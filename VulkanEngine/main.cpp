@@ -85,23 +85,50 @@ namespace ve {
 	class EventListenerKeyboard : public VEEventListener {
 		glm::vec3 linearMomentum;
 		glm::vec3 force;
+		glm::vec3 angularMomentum;
+		float rotSpeed;
 
 	protected:
 		virtual void onFrameStarted(veEvent event) {
-			static uint32_t cubeid = 0;
+			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
+			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Cube0");
+
+			glm::vec3 position = eParent->getPosition(); //in Local Space
+			glm::mat4 orientation = eParent->getTransform(); //in Local 
+			//Assume that the objects center is its postion
+			glm::vec4 center = glm::vec4(position.x, position.y, position.z, 1);
+			float inertiaTensor = 1.0f; //assume interia tensor is 1
 			float mass = 1.0f;
 
-			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
+			// Kreuzprodukt von (dem Produkt zwischen orientierungsmatrix und center vector) und dem force vector.
+			glm::vec4 c = orientation * center;
+			glm::vec3 torque = glm::cross(glm::vec3(c.x, c.y, c.z), force);
+			// mass * velocity; mass = 1;
 			linearMomentum += (float)event.dt * mass * force;
+			angularMomentum += (float)event.dt * torque; //es selbst plus delta time mal torque.
+			//orientierungsmatrix mal dem inversen inertia tensor mal der transponierten orientierungsmatrix mal dem angular momentum.
+			glm::vec3 angularVelocity = orientation * inertiaTensor * glm::transpose(orientation) * glm::vec4(angularMomentum.x, angularMomentum.y, angularMomentum.z, 1);
+
+			glm::vec4 rot4 = glm::vec4(1.0);
+			float angle = rotSpeed * (float)event.dt;
+			rot4 = e1->getTransform() * glm::vec4(0.0, 0.1, 0.0, 1.0);
+			glm::vec3  rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
+
+			rot3 = rot3 + float(event.dt) * glm::matrixCross3(angularVelocity) * rot3;
+			glm::mat4  rotate = glm::rotate(glm::mat4(1.0), angle, rot3);
+
 			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum));
-			linearMomentum -= (float)event.dt * mass * force;
+			e1->multiplyTransform(rotate);
+			//force += (force/10)*(-1);
+			force = glm::vec3(0, 0, 0);
 		};
 
 		virtual bool onKeyboard(veEvent event) {
 			if (event.idata3 == GLFW_RELEASE) return false;
 
 			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
-				force = glm::vec3(0, -2, 0);
+				force = glm::vec3(0, -1, 0);
+				rotSpeed = d(e);
 
 			}
 		}
@@ -110,7 +137,9 @@ namespace ve {
 		///Constructor of class EventListenerCollision
 		EventListenerKeyboard(std::string name) : VEEventListener(name) {
 			linearMomentum = glm::vec3(0, 0, 0);
+			angularMomentum = glm::vec4(0, 0, 0, 0);
 			force = glm::vec3(0, 0, 0);
+			rotSpeed = 0;
 		};
 
 		///Destructor of class EventListenerCollision
