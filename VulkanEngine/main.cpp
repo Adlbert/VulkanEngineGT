@@ -51,7 +51,7 @@ namespace ve {
 			static uint32_t cubeid = 0;
 
 			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
-			glm::vec3 positionCube1 = getSceneManagerPointer()->getSceneNode("The Cube1 Parent")->getPosition();
+			glm::vec3 positionCube1 = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
 
 
 			gjk::Box cube0{ positionCube0 };
@@ -101,7 +101,8 @@ namespace ve {
 			if (event.idata3 == GLFW_RELEASE) return false;
 
 			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
-				force = glm::vec3(10, 0, 0);
+				force = glm::vec3(0, -2, 0);
+
 			}
 		}
 
@@ -163,14 +164,8 @@ namespace ve {
 			VESceneNode* e1, * e1Parent;
 			e1Parent = getSceneManagerPointer()->createSceneNode("The Cube0 Parent", pScene, glm::mat4(1.0));
 			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
-			e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f, 1.0f, 10.0f)));
+			e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f, 5.0f, 10.0f)));
 			e1Parent->addChild(e1);
-
-			VESceneNode* e2, * e2Parent;
-			e2Parent = getSceneManagerPointer()->createSceneNode("The Cube1 Parent", pScene, glm::mat4(1.0));
-			VECHECKPOINTER(e2 = getSceneManagerPointer()->loadModel("The Cube1", "media/models/test/crate0", "cube.obj"));
-			e2Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 1.0f, 10.0f)));
-			e2Parent->addChild(e2);
 
 			m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
 		};
