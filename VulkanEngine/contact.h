@@ -13,168 +13,165 @@
 #include <random>
 #include <set>
 
+#include "define.h"
 #include "collider.h"
-#include "sat.h"
+#include "collision.h"
 
 namespace gjk {
 
-	using vec3pair = std::pair<vec3, vec3>;
+    //a contact stores a contact point between two objects
+    //normal is the contact normal pointing away from obj2
+    struct contact {
+        Polytope *obj1;    
+        Polytope *obj2;    
+        vec3 pos;
+        vec3 normal;
 
-	enum contact_type {
-		Vertex_Face_Contact,
-		Edge_Edge_Contact,
-	};
-
-	struct contact {
-		contact_type type;
-		Polytope* obj1;
-		Polytope* obj2;
-		Line* edge1;
-		Line* edge2;
-		vec3 pos;
-		vec3 normal;
-		int face_in_obj1;
-		int face_in_obj2;
-		int pos_in_obj1;
-
-		virtual bool operator<(const contact& rhs) const {
-			if (this->type == rhs.type) {
-				if (this->face_in_obj1 == rhs.face_in_obj1) {
-					if (this->pos_in_obj1 == rhs.pos_in_obj1) {
-						return false;
-					}
-					return this->pos_in_obj1 < rhs.pos_in_obj1;
-				}
-				return this->face_in_obj1 < rhs.face_in_obj1;
-			}
-			return this->type < rhs.type;
-		}
-	};
-
-	/*template<>
-	struct std::hash<face_contact> {
-	   size_t operator()(const face_contact& c) {
-		   return std::hash<std::pair<int,int>>()( std::make_pair(c.f1, c.f2));
-	   }
-	};*/
-
-	void process_vertex_face_contact(Polytope& obj1, Polytope& obj2, int v1, int f2, std::set<contact>& contacts) {
-		contact contact;
-		contact.type = Vertex_Face_Contact;
-		contact.obj1 = &obj1;
-		contact.obj2 = &obj2;
-		contact.pos_in_obj1 = v1;
-		contact.face_in_obj2 = f2;
-		contact.pos = obj1.m_points[v1];
-		contact.normal = obj2.get_face_normal(f2);
-		contacts.insert(contact);
-	}
-
-	void process_edge_edge_contact(Line& edge1, Line& edge2, int f1, int f2, int e1, std::set<contact>& contacts) {
-		contact contact;
-		contact.type = Edge_Edge_Contact;
-		contact.pos = edge1.m_pos;
-		contact.edge1 = &edge1;
-		contact.edge2 = &edge2;
-		contact.pos_in_obj1 = e1;
-		contact.face_in_obj1 = f1;
-		contact.face_in_obj2 = f2;
-		contact.normal = glm::cross(edge1.m_dir, edge2.m_dir);
-		if (contact.normal == vec3(0, 0, 0))
-			return;
-		contacts.insert(contact);
-	}
-
-	//test a pair of faces against each other.
-	//collide each vertex from one face with the other face
-	//collide each edge from one face with all edges from the other face
-	void process_face_face_contact(Polytope& obj1, Polytope& obj2, vec3& dir
-		, int f1, int f2, std::set<contact>& contacts) {
-
-		Face& face1 = obj1.m_faces[f1];
-		Face& face2 = obj2.m_faces[f2];
-
-		for (int v1 : face1.m_data->m_vertices) {      //go through all vertices of face 1
-			if (sat(obj1.m_vertices[v1], face2, dir)) {
-				process_vertex_face_contact(obj1, obj2, v1, f2, contacts);
-			}
-		}
-
-		for (int v2 : face2.m_data->m_vertices) {      //go through all vertices of face 2
-			if (sat(obj2.m_vertices[v2], face1, dir)) {
-				process_vertex_face_contact(obj2, obj1, v2, f1, contacts);
-			}
-		}
-
-		std::vector<Line> edges1;
-		std::vector<Line> edges2;
-		face1.get_edges(edges1);
-		face2.get_edges(edges2);
-
-		int e1 = f1*edges1.size();
-		if (glm::dot(face1.get_face_normal(), face2.get_face_normal()) > 0) {
-			for (auto& edge1 : edges1) {      //go through all edge pairs
-				for (auto& edge2 : edges2) {
-					if (sat(edge1, edge2, dir)) {
-						process_edge_edge_contact(edge1, edge2, f1, f2, e1, contacts);
-					}
-				}
-				e1++;
-			}
-		}
-	}
-
-
-	//find a list of face-pairs that touch each other
-	//process these pairs by colliding a face agains vertices and edges of the other face
-	void process_face_obj_contacts(Polytope& obj1, Polytope& obj2, vec3& dir
-		, std::vector<int>& obj1_faces, std::vector<int>& obj2_faces
-		, std::set<contact>& contacts) {
-
-		for (int f1 : obj1_faces) {             // go through all face-face pairs
-			for (int f2 : obj2_faces) {
-				//this is always true
-				//bc previous already testes if faces touch
-				if (sat(obj1.m_faces[f1], obj2.m_faces[f2], dir)) {           //only if the faces actually touch - can also drop this if statement
-					process_face_face_contact(obj1, obj2, dir, f1, f2, contacts); //compare all vertices and edges in the faces
-				}
-			}
-		}
-	}
-
-
-	//find a face of obj1 that touches obj2
-	//return it and its neighbors by adding their indices to a list
-	void get_face_obj_contacts(Polytope& obj1, Polytope& obj2, vec3& dir, std::vector<int>& obj_faces) {
-		for (int f = 0; f < obj1.m_faces.size(); ++f) {
-			Face& face = obj1.m_faces[f];
-			if (sat(face, obj2, dir)) {              //find the first face from obj1 that touches obj2
-				obj_faces.push_back(f);                    //insert into result list
-				auto& neighbors = obj1.get_face_neighbors(f);
-				std::copy(std::begin(neighbors), std::end(neighbors), std::back_inserter(obj_faces));   //also insert its neighbors
-				return;
-			}
-		}
-	}
-
-
-	//neighboring faces algorithm
-	void neighboring_faces(Polytope& obj1, Polytope& obj2, vec3& dir, std::set<contact>& contacts) {
-		std::vector<int> obj1_faces;
-		std::vector<int> obj2_faces;
-
-		get_face_obj_contacts(obj1, obj2, dir, obj1_faces);    //get list of faces from obj1 that touch obj2
-		get_face_obj_contacts(obj2, obj1, dir, obj2_faces);    //get list of faces from obj2 that touch obj1
-		process_face_obj_contacts(obj1, obj2, dir, obj1_faces, obj2_faces, contacts); //collide them pairwise
-	}
-
-
-	//compute a list of contact points between two objects
-	void  contacts(Polytope& obj1, Polytope& obj2, vec3& dir, std::set<contact>& contacts) {
-		//if (dot(dir, dir) < 1.0e-6) dir = vec3(0.0f, 1.0f, 0.0f);
-		neighboring_faces(obj1, obj2, dir, contacts);
-	}
-
+        //int v1 = -1;int f1 = -1;int f2 = -1;int e1 = -1;int e2 = -1;
+        bool operator <(const contact& c) const; //need this for std::set
+    };
 
 }
+
+
+//define a hash for struct contact
+//must be defined in namespace std
+template<>
+struct std::hash<gjk::contact> {
+    size_t operator()(const gjk::contact& c) {
+        return std::hash<std::tuple<gjk::Polytope*, gjk::Polytope*,vec3>>()(
+            std::make_tuple( c.obj1, c.obj2, c.pos ) );
+    }
+};
+
+
+namespace gjk {
+
+    //operator< uses hash values for contacts
+    inline bool contact::operator <(const contact& c) const {
+        return std::hash<contact>()(*this) < std::hash<contact>()(c);
+    }
+
+    //store a contact in the contact set
+    //by convention store the larger pointer first
+    inline void add_contact( contact c, std::set<contact> & contacts) {
+            if( reinterpret_cast<std::uintptr_t>(c.obj1) > reinterpret_cast<std::uintptr_t>(c.obj2) ) {
+                contacts.insert( c );
+            } else {
+                contacts.insert( {  c.obj2, c.obj1, c.pos, -c.normal
+                                    //, c.v1, c.f2, c.f1
+                                 }  );
+            }
+    }
+
+    //point contacts face if the distance point-plane is smaller than EPS AND 
+    //the point is inside the face Voronoi region.
+    //since contacts can be symmetric, as convention, sort the polytopes by larger pointer first
+    inline void process_vertex_face_contact( Vertex &vertex, Face &face1, Face &face2, std::set<contact> & contacts) {
+        if( collision( vertex, face2 ) ) {
+            add_contact(    { vertex.polytope(), face2.polytope(), vertex.pointW(), face2.normalW()
+                            //, vertex.index(), face1.index(), face2.index() 
+                            }
+                            , contacts );
+        }
+    }
+
+    //process a possible edge-edge contact
+    //if contact normal points inwards then invert the sign
+    inline void process_edge_edge_contact( Face &face1, Line &edge1, Face &face2, Line &edge2, std::set<contact> & contacts) {
+        pluecker_point point = intersect_segment_segment( edge1, edge2 );
+        if( point.w()==0) return;
+
+        vec3 p = point.p3D();
+        vec3 cp = cross(edge1.m_dir, edge2.m_dir);     //contact normal
+        vec3 outwards2 = cross( edge2.m_dir, face2.normalW());  //points outwards of face2
+        if( dot( cp, outwards2 ) <0  ) cp *= -1.0f;    //contact normal should point outwards of face2
+        add_contact(    {  face1.polytope(), face2.polytope(), p, cp
+                        //, -1, face1.index(), face2.index() 
+                        }
+                        , contacts  );
+    }
+
+    //test a pair of faces against each other.
+    //test each vertex from one face with the other face
+    //test each edge from one face with all edges from the other face
+    inline void process_face_face_contact( Face &face1, Face &face2, vec3 &dir,  std::set<contact> & contacts ) {
+        
+        if( !collision( face1, face2, dir) || dot(face1.normalW(), face2.normalW()) >= 0.0f ) return;   //only if the faces actually touch 
+
+        for( int v1 : face1.face_vertices() ) {      //go through all vertices of face 1
+            process_vertex_face_contact( face1.polytope()->vertex(v1), face1, face2, contacts );
+        }
+
+        for( int v2 : face2.face_vertices() ) {      //go through all vertices of face 2
+            process_vertex_face_contact( face2.polytope()->vertex(v2), face2, face1, contacts );
+        }
+
+        std::vector<Line> edges1;
+        std::vector<Line> edges2;
+        face1.edgesW( edges1 );
+        face2.edgesW( edges2 );
+
+        for( auto& edge1 : edges1 ) {      //go through all edge pairs
+            for( auto& edge2 : edges2 ) {
+                process_edge_edge_contact( face1, edge1, face2, edge2, contacts );
+            }
+        }
+    }
+
+
+    //find a list of face-pairs that touch each other
+    //process these pairs by colliding a face agains vertices and edges of the other face
+    inline void process_face_obj_contacts(     Polytope &obj1, Polytope &obj2, vec3 &dir
+                                    ,   vint& obj1_faces, vint& obj2_faces
+                                    ,   std::set<contact> & contacts ) {
+        
+        for( int f1 : obj1_faces) {             // go through all face-face pairs
+            Face & face1 = obj1.face(f1);
+            for( int f2 : obj2_faces) {
+                Face & face2 = obj2.face(f2);
+                //if( f1==2 && f2==3)
+                process_face_face_contact( face1, face2, dir, contacts ); //compare all vertices and edges in the faces
+            }
+        }
+    }
+
+
+    //find the first face of obj1 that touches obj2
+    //return it and its neighbors by adding their indices to a list
+    inline void find_face_obj_contacts( Polytope &obj1, Polytope &obj2, vec3 &dir, vint& obj_faces ) {
+        for( auto & face : obj1.faces() ) {
+            if( collision( face, obj2, dir ) ) {
+                obj_faces.push_back(face.index());
+                auto& neighbors = face.neighbors();
+                std::copy( std::begin(neighbors), std::end(neighbors), std::back_inserter(obj_faces) );   //also insert its neighbors
+                return;
+            }
+        }
+    }
+
+
+    //neighboring faces algorithm
+    inline void neighboring_faces( Polytope &obj1, Polytope &obj2, vec3 &dir, std::set<contact> & contacts ) {
+        vint obj1_faces;
+        vint obj2_faces;
+
+        find_face_obj_contacts( obj1, obj2, dir, obj1_faces );    //get list of faces from obj1 that touch obj2
+        find_face_obj_contacts( obj2, obj1, dir, obj2_faces );    //get list of faces from obj2 that touch obj1
+        process_face_obj_contacts( obj1, obj2, dir, obj1_faces, obj2_faces, contacts ); //collide them pairwise
+    }
+
+
+    //-------------------------------------------------------------------------------------------
+
+
+    //compute a list of contact points between two objects
+    inline void  contacts( Polytope &obj1, Polytope &obj2, vec3 &dir, std::set<contact> & contacts ) {
+        if( dot(dir, dir) < EPS ) dir = vec3(0.0f, 1.0f, 0.0f);
+        neighboring_faces( obj1, obj2, dir, contacts);
+    }
+
+}
+
+
 #endif

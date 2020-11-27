@@ -8,7 +8,6 @@
 
 #include "VEInclude.h"
 
-#include "sat.h"
 #include "gjk_epa.h"
 #include "contact.h"
 
@@ -50,25 +49,7 @@ namespace ve {
 		virtual void onFrameStarted(veEvent event) {
 			static uint32_t cubeid = 0;
 
-			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
-			glm::vec3 positionCube1 = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
 
-
-			gjk::Box cube0{ positionCube0 };
-			gjk::Box cube1{ positionCube1 };
-			vec3 mtv(1, 0, 0); //minimum translation vector
-
-			bool hit = gjk::sat(cube0, cube1, mtv);
-
-
-			if (hit) {
-				std::set<gjk::contact> ct;
-				vec3 mtv(1, 0, 0);
-				gjk::contacts(cube0, cube1, mtv, ct);
-
-				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
-				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
-			}
 		};
 
 	public:
@@ -121,6 +102,32 @@ namespace ve {
 			e1->multiplyTransform(rotate);
 			//force += (force/10)*(-1);
 			force = glm::vec3(0, 0, 0);
+
+
+
+			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
+			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getTransform();
+			glm::vec3 positionPlane = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
+
+
+			gjk::Box cube0{ positionCube0 };
+			gjk::Box plane{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 1.0f, 100.0f)) };
+			vec3 mtv(1, 0, 0); //minimum translation vector
+			//cube0.m_matRS = rotate;
+
+			bool hit = gjk::collision(cube0, plane, mtv);
+
+
+			if (hit) {
+				std::set<gjk::contact> ct;
+				vec3 mtv(1, 0, 0);
+				gjk::contacts(cube0, plane, mtv, ct);
+
+				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
+				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
+			}
+
+
 		};
 
 		virtual bool onKeyboard(veEvent event) {

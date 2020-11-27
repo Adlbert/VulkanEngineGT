@@ -134,7 +134,16 @@
     <ClInclude Include="hash.h">
       <Filter>Header Files\GJK</Filter>
     </ClInclude>
-    <ClInclude Include="sat.h">
+    <ClInclude Include="collision.h">
+      <Filter>Header Files\GJK</Filter>
+    </ClInclude>
+    <ClInclude Include="define.h">
+      <Filter>Header Files\GJK</Filter>
+    </ClInclude>
+    <ClInclude Include="distance.h">
+      <Filter>Header Files\GJK</Filter>
+    </ClInclude>
+    <ClInclude Include="pluecker.h">
       <Filter>Header Files\GJK</Filter>
     </ClInclude>
   </ItemGroup>
