@@ -64,7 +64,6 @@ namespace ve {
 			if (hit) {
 				std::set<gjk::contact> ct;
 				vec3 mtv(1, 0, 0);
-				//cube0.m_pos -= vec3(.1,0,0);
 				gjk::contacts(cube0, cube1, mtv, ct);
 
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();

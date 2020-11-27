@@ -112,13 +112,15 @@ namespace gjk {
 		face2.get_edges(edges2);
 
 		int e1 = f1*edges1.size();
-		for (auto& edge1 : edges1) {      //go through all edge pairs
-			for (auto& edge2 : edges2) {
-				if (sat(edge1, edge2, dir)) {
-					process_edge_edge_contact(edge1, edge2, f1, f2, e1, contacts);
+		if (glm::dot(face1.get_face_normal(), face2.get_face_normal()) > 0) {
+			for (auto& edge1 : edges1) {      //go through all edge pairs
+				for (auto& edge2 : edges2) {
+					if (sat(edge1, edge2, dir)) {
+						process_edge_edge_contact(edge1, edge2, f1, f2, e1, contacts);
+					}
 				}
+				e1++;
 			}
-			e1++;
 		}
 	}
 
@@ -134,8 +136,7 @@ namespace gjk {
 				//this is always true
 				//bc previous already testes if faces touch
 				if (sat(obj1.m_faces[f1], obj2.m_faces[f2], dir)) {           //only if the faces actually touch - can also drop this if statement
-					if(glm::dot(obj1.m_faces[f1].get_face_normal(), obj2.m_faces[f2].get_face_normal()) > 0)
-						process_face_face_contact(obj1, obj2, dir, f1, f2, contacts); //compare all vertices and edges in the faces
+					process_face_face_contact(obj1, obj2, dir, f1, f2, contacts); //compare all vertices and edges in the faces
 				}
 			}
 		}
