@@ -70,16 +70,18 @@ namespace gjk {
 		contacts.insert(contact);
 	}
 
-	void process_edge_edge_contact(Line& edge1, Line& edge2, int f1, int f2, int e1, int e2, std::set<contact>& contacts) {
+	void process_edge_edge_contact(Line& edge1, Line& edge2, int f1, int f2, int e1, std::set<contact>& contacts) {
 		contact contact;
 		contact.type = Edge_Edge_Contact;
 		contact.pos = edge1.m_pos;
 		contact.edge1 = &edge1;
 		contact.edge2 = &edge2;
-		contact.pos_in_obj1 = e1;	//need to set something to make them distinguishable
+		contact.pos_in_obj1 = e1;
 		contact.face_in_obj1 = f1;
 		contact.face_in_obj2 = f2;
 		contact.normal = glm::cross(edge1.m_dir, edge2.m_dir);
+		if (contact.normal == vec3(0, 0, 0))
+			return;
 		contacts.insert(contact);
 	}
 
@@ -109,17 +111,12 @@ namespace gjk {
 		face1.get_edges(edges1);
 		face2.get_edges(edges2);
 
-		int v1 = face1.m_data->m_vertices[0];
-		int v2 = face2.m_data->m_vertices[0];
-
-		int e1 = 0;
+		int e1 = f1*edges1.size();
 		for (auto& edge1 : edges1) {      //go through all edge pairs
-			int e2 = 0;
 			for (auto& edge2 : edges2) {
 				if (sat(edge1, edge2, dir)) {
-					process_edge_edge_contact(edge1, edge2, f1, f2, e1, e2, contacts);
+					process_edge_edge_contact(edge1, edge2, f1, f2, e1, contacts);
 				}
-				e2++;
 			}
 			e1++;
 		}
@@ -137,7 +134,8 @@ namespace gjk {
 				//this is always true
 				//bc previous already testes if faces touch
 				if (sat(obj1.m_faces[f1], obj2.m_faces[f2], dir)) {           //only if the faces actually touch - can also drop this if statement
-					process_face_face_contact(obj1, obj2, dir, f1, f2, contacts); //compare all vertices and edges in the faces
+					if(glm::dot(obj1.m_faces[f1].get_face_normal(), obj2.m_faces[f2].get_face_normal()) > 0)
+						process_face_face_contact(obj1, obj2, dir, f1, f2, contacts); //compare all vertices and edges in the faces
 				}
 			}
 		}
