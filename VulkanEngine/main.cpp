@@ -68,24 +68,26 @@ namespace ve {
 		glm::vec3 force;
 		glm::vec3 angularMomentum;
 		float rotSpeed;
+		float mass = 1.0f;
 
-	protected:
-		virtual void onFrameStarted(veEvent event) {
+
+	private:
+		void applyRotation(veEvent event) {
+			float inertiaTensor = 1.0f; //assume interia tensor is 1
+
 			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
 			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Cube0");
 
 			glm::vec3 position = eParent->getPosition(); //in Local Space
-			glm::mat4 orientation = eParent->getTransform(); //in Local 
+
 			//Assume that the objects center is its postion
 			glm::vec4 center = glm::vec4(position.x, position.y, position.z, 1);
-			float inertiaTensor = 1.0f; //assume interia tensor is 1
-			float mass = 1.0f;
 
+			glm::mat4 orientation = eParent->getTransform(); //in Local 
 			// Kreuzprodukt von (dem Produkt zwischen orientierungsmatrix und center vector) und dem force vector.
 			glm::vec4 c = orientation * center;
 			glm::vec3 torque = glm::cross(glm::vec3(c.x, c.y, c.z), force);
 			// mass * velocity; mass = 1;
-			linearMomentum += (float)event.dt * mass * force;
 			angularMomentum += (float)event.dt * torque; //es selbst plus delta time mal torque.
 			//orientierungsmatrix mal dem inversen inertia tensor mal der transponierten orientierungsmatrix mal dem angular momentum.
 			glm::vec3 angularVelocity = orientation * inertiaTensor * glm::transpose(orientation) * glm::vec4(angularMomentum.x, angularMomentum.y, angularMomentum.z, 1);
@@ -97,14 +99,17 @@ namespace ve {
 
 			rot3 = rot3 + float(event.dt) * glm::matrixCross3(angularVelocity) * rot3;
 			glm::mat4  rotate = glm::rotate(glm::mat4(1.0), angle, rot3);
-
-			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum));
 			e1->multiplyTransform(rotate);
-			//force += (force/10)*(-1);
-			force = glm::vec3(0, 0, 0);
+		}
 
+		void applyMovement(veEvent event) {
+			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
 
+			linearMomentum += (float)event.dt * mass * force;
+			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum));
+		}
 
+		void checkCollision() {
 			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
 			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getTransform();
 			glm::vec3 positionPlane = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
@@ -126,8 +131,13 @@ namespace ve {
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
 			}
+		}
 
-
+	protected:
+		virtual void onFrameStarted(veEvent event) {
+			//applyRotation(event);
+			applyMovement(event);
+			checkCollision();
 		};
 
 		virtual bool onKeyboard(veEvent event) {
