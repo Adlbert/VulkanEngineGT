@@ -10,7 +10,7 @@
 using namespace glm;
 
 
-namespace gjk {
+namespace vpe {
 
 
     //Pluecker coordinates for point, line and plane (Eric Lengyel, Foundations of Game Engine Development, Vol 1: Mathematics, 2016)

@@ -8,7 +8,7 @@ using namespace glm;
 
 #include <vector>
 
-namespace gjk { 
+namespace vpe { 
 
     constexpr float SMALL = 1.0e-3f;
     constexpr float EPS = 1.0e-6f;

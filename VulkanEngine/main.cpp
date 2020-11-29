@@ -153,18 +153,23 @@ namespace ve {
 			glm::vec3 positionPlane = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
 
 
-			gjk::Box cube0{ positionCube0 };
-			gjk::Box plane{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 1.0f, 100.0f)) };
-			vec3 mtv(1, 0, 0); //minimum translation vector
+			vpe::Box cube0{ positionCube0 };
+			vpe::Box plane{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 1.0f, 100.0f)) };
+			
+			vec3 mtv(0,-1, 0); //minimum translation vector
 			//cube0.m_matRS = rotate;
+			glm::vec3 n = glm::normalize(g);
 
-			bool hit = gjk::collision(cube0, plane, mtv);
+			bool hit = vpe::collision(cube0, plane, mtv);
 
 
 			if (hit) {
-				std::set<gjk::contact> ct;
-				vec3 mtv(1, 0, 0);
-				gjk::contacts(cube0, plane, mtv, ct);
+				std::set<vpe::contact> ct;
+				//vec3 mtv(1, 0, 0);
+				vec3 mtv(0, -10, 0); //minimum translation vector
+				//glm::vec3 n = glm::normalize(g);
+
+				vpe::contacts(cube0, plane, mtv, ct);
 
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
@@ -186,10 +191,11 @@ namespace ve {
 			if (event.idata3 == GLFW_RELEASE) return false;
 
 			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
-				force += glm::vec3(20, 20, 0);
-				rotSpeed = d(e);
-
+				force += glm::vec3(20.0f, 20.0f, 0.0f);
+				rotSpeed = (float)d(e);
+				return true;
 			}
+			return false;
 		}
 
 	public:

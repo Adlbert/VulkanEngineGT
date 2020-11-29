@@ -4,7 +4,7 @@
 #include "pluecker.h"
 #include "collider.h"
 
-namespace gjk {
+namespace vpe {
 
     //--------------------------------------------------------------------------
 
