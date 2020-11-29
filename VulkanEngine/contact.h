@@ -68,7 +68,8 @@ namespace gjk {
     //the point is inside the face Voronoi region.
     //since contacts can be symmetric, as convention, sort the polytopes by larger pointer first
     inline void process_vertex_face_contact( Vertex &vertex, Face &face1, Face &face2, std::set<contact> & contacts) {
-        if( collision( vertex, face2 ) ) {
+        //collision(vertex, face2)
+        if(vertex.polytope()->pos().y <= 0) {
             add_contact(    { vertex.polytope(), face2.polytope(), vertex.pointW(), face2.normalW()
                             //, vertex.index(), face1.index(), face2.index() 
                             }
@@ -97,7 +98,8 @@ namespace gjk {
     //test each edge from one face with all edges from the other face
     inline void process_face_face_contact( Face &face1, Face &face2, vec3 &dir,  std::set<contact> & contacts ) {
         
-        if( !collision( face1, face2, dir) || dot(face1.normalW(), face2.normalW()) >= 0.0f ) return;   //only if the faces actually touch 
+        //!collision(face1, face2, dir) ||
+        if(dot(face1.normalW(), face2.normalW()) >= 0.0f ) return;   //only if the faces actually touch 
 
         for( int v1 : face1.face_vertices() ) {      //go through all vertices of face 1
             process_vertex_face_contact( face1.polytope()->vertex(v1), face1, face2, contacts );

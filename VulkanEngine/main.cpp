@@ -112,7 +112,7 @@ namespace ve {
 
 			gjk::Box cube0{ positionCube0 };
 			gjk::Box plane{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 1.0f, 100.0f)) };
-			vec3 mtv(1, 0, 0); //minimum translation vector
+			vec3 mtv(0, 1, 0); //minimum translation vector
 			//cube0.m_matRS = rotate;
 
 			bool hit = gjk::collision(cube0, plane, mtv);
@@ -120,7 +120,7 @@ namespace ve {
 
 			if (hit) {
 				std::set<gjk::contact> ct;
-				vec3 mtv(1, 0, 0);
+				vec3 mtv(0, 1, 0);
 				gjk::contacts(cube0, plane, mtv, ct);
 
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
