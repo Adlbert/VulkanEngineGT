@@ -112,9 +112,9 @@ namespace ve {
 
 		//f
 		glm::vec3 get_mag_imp_dirN(float e, float d, glm::vec3 n, glm::mat4 K, float dF, glm::vec3 t) {
-			float d1 = -(1 - e) * d;
+			float d1 = -(1 + e) * d;
 			glm::vec3 n_ = n - dF * t;
-			glm::vec3 d2 = glm::translate(n) * (K * glm::vec4(n_.x, n_.y, n_.z, 1.0f));
+			glm::vec3 d2 = glm::translate(n) * K * glm::vec4(n_.x, n_.y, n_.z, 1.0f);
 			return d1 / d2;
 		}
 
@@ -206,11 +206,11 @@ namespace ve {
 
 		void checkCollision() {
 			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
-			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getTransform();
+			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getWorldRotation();
 			glm::vec3 positionPlane = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
 
 			//lm::mat3(getSceneManagerPointer()->getSceneNode("The Cube0")->getRotation())
-			vpe::Box cube0{ positionCube0, getSceneManagerPointer()->getSceneNode("The Cube0")->getWorldRotation() };
+			vpe::Box cube0{ positionCube0, rotationCube0 };
 			vpe::Box plane{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 1.0f, 100.0f)) };
 
 
@@ -225,6 +225,9 @@ namespace ve {
 				vec3 mtv(0, 1, 0); //minimum translation vector
 				mtv = glm::normalize(force + (g * -1));
 
+				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
+				glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
+
 				vpe::contacts(cube0, plane, mtv, ct);
 
 				/*
@@ -233,10 +236,9 @@ namespace ve {
 				======================================================================================================================================================
 				*/
 
-				float e = 0.8f;
-				float dF = 0.8f;
+				float e = 0.2f;
+				float dF = 0.4f;
 				//resolv interpenetration
-				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
 				//assume postion as center
 				//glm::vec3 cA = getSceneManagerPointer()->getSceneNode("The Cube0")->getPosition();
 				glm::vec3 cA = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
@@ -245,18 +247,23 @@ namespace ve {
 				glm::vec3 rB = glm::vec3(0.0f);
 				std::set<vpe::contact>::iterator itr;
 				for (itr = ct.begin(); itr != ct.end(); itr++) {
-					//glm::vec3 rA_ = (itr->obj1->posW2L(itr->pos) - cA);
-					//glm::vec3 rB_ = (itr->obj2->posW2L(itr->pos) - positionPlane);
+					//Vectors in World Space
 					glm::vec3 rA_ = itr->pos - cA;
 					glm::vec3 rB_ = itr->pos - positionPlane;
 					glm::vec3 lvA = force + g;
 					glm::vec3 lvB = glm::vec3();
 					glm::vec3 aVB = glm::vec3();
 					glm::vec3 prel = get_prel(lvA, lvB, angularVelocity, aVB, rA_, rB_);
-					glm::vec3 n = itr->normal * -1;
+					glm::vec3 n = itr->normal;
 					float d = get_d(n, prel);
 					if (d < 0) {
 						glm::vec3 f_part = fHat(lvA, lvB, angularVelocity, aVB, mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, e, n, dF);
+						rA += rA_;
+						rB += rB_;
+						f_ += f_part;
+					}
+					if (d == 0) {
+						glm::vec3 f_part = fHat(lvA, lvB, angularVelocity, aVB, mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, 0.0f, n, dF);
 						rA += rA_;
 						rB += rB_;
 						f_ += f_part;
@@ -266,9 +273,8 @@ namespace ve {
 				rA /= ct.size();
 				rB /= ct.size();
 				force = f_;
-				linearMomentum = f_;
-				angularMomentum = glm::cross(rA, f_);
-				//gravity = false;
+				linearMomentum += f_;
+				angularMomentum += glm::cross(rA, f_);
 
 				/*
 				======================================================================================================================================================
