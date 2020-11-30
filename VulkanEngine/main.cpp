@@ -214,7 +214,6 @@ namespace ve {
 
 			vec3 mtv(0, 1, 0); //minimum translation vector
 			mtv = glm::normalize(force + g) * -1;
-			//cube0.m_matRS = rotate;
 
 			bool hit = vpe::collision(cube0, plane, mtv);
 
@@ -238,7 +237,10 @@ namespace ve {
 				float dF = 1.0f;
 
 				//resolv interpenetration
-				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->setPosition(glm::vec3(positionCube0.x, positionCube0.y + 1.0f, positionCube0.z));
+				//getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->setPosition(glm::vec3(positionCube0.x, positionCube0.y + 2.0f, positionCube0.z));
+				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
+				//getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
+
 				//assume postion as center
 				glm::vec3 cA = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
 
@@ -249,7 +251,7 @@ namespace ve {
 				for (itr = ct.begin(); itr != ct.end(); itr++) {
 					glm::vec3 rA_ = itr->pos - cA;
 					glm::vec3 rB_ = itr->pos - positionPlane;
-					glm::vec3 f_part = fHat(force + g, glm::vec3(0.0f), angularVelocity, glm::vec3(0.0f), mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, e, itr->normal, dF);
+					glm::vec3 f_part = fHat(force + g, glm::vec3(), angularVelocity, glm::vec3(), mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, e, itr->normal, dF);
 					rA += rA_;
 					rB += rB_;
 					f_ += f_part;
@@ -257,7 +259,7 @@ namespace ve {
 				f_ /= ct.size();
 				rA /= ct.size();
 				rB /= ct.size();
-				force = f_+g;
+				force = f_ + g;
 				linearMomentum += f_;
 				angularMomentum += glm::cross(rA, f_);
 
