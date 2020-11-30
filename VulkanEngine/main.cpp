@@ -112,9 +112,9 @@ namespace ve {
 
 		//f
 		glm::vec3 get_mag_imp_dirN(float e, float d, glm::vec3 n, glm::mat4 K, float dF, glm::vec3 t) {
-			float d1 = -(1 + e) * d;
+			float d1 = -(1 - e) * d;
 			glm::vec3 n_ = n - dF * t;
-			glm::vec3 d2 = glm::translate(n) * K * glm::vec4(n_.x, n_.y, n_.z, 1.0f);
+			glm::vec3 d2 = glm::translate(n) * (K * glm::vec4(n_.x, n_.y, n_.z, 1.0f));
 			return d1 / d2;
 		}
 
@@ -191,7 +191,7 @@ namespace ve {
 			glm::vec3 torque = glm::cross(glm::vec3(c.x, c.y, c.z), force);
 			// mass * velocity; mass = 1;
 			angularMomentum += (float)event.dt * torque; //es selbst plus delta time mal torque.
-				//orientierungsmatrix mal dem inversen inertia tensor mal der transponierten orientierungsmatrix mal dem angular momentum.
+			//orientierungsmatrix mal dem inversen inertia tensor mal der transponierten orientierungsmatrix mal dem angular momentum.
 			angularVelocity = orientation * glm::mat4(inertiaTensor) * glm::transpose(orientation) * glm::vec4(angularMomentum.x, angularMomentum.y, angularMomentum.z, 1);
 
 			glm::vec4 rot4 = glm::vec4(1.0);
@@ -222,10 +222,8 @@ namespace ve {
 
 			if (hit) {
 				std::set<vpe::contact> ct;
-				//vec3 mtv(1, 0, 0);
 				vec3 mtv(0, 1, 0); //minimum translation vector
 				mtv = glm::normalize(force + (g * -1));
-				//glm::vec3 n = glm::normalize(g);
 
 				vpe::contacts(cube0, plane, mtv, ct);
 
@@ -236,31 +234,41 @@ namespace ve {
 				*/
 
 				float e = 0.8f;
-				float dF = 0.4f;
+				float dF = 0.8f;
 				//resolv interpenetration
 				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
 				//assume postion as center
-				glm::vec3 cA = getSceneManagerPointer()->getSceneNode("The Cube0")->getPosition();
-				glm::vec3 f_ = glm::vec3();
-				glm::vec3 rA = glm::vec3();
-				glm::vec3 rB = glm::vec3();
+				//glm::vec3 cA = getSceneManagerPointer()->getSceneNode("The Cube0")->getPosition();
+				glm::vec3 cA = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
+				glm::vec3 f_ = glm::vec3(0.0f);
+				glm::vec3 rA = glm::vec3(0.0f);
+				glm::vec3 rB = glm::vec3(0.0f);
 				std::set<vpe::contact>::iterator itr;
 				for (itr = ct.begin(); itr != ct.end(); itr++) {
-					glm::vec3 rA_ = itr->obj1->posW2L(itr->pos) - cA;
-					glm::vec3 rB_ = itr->obj2->posW2L(itr->pos) - positionPlane;
-					//is this still buggy  i?
-					//when using glm::vec3(0,1,0) as n it looks a bit better
-					glm::vec3 f_part = fHat(force + g, glm::vec3(5.11f), angularVelocity, glm::vec3(5.11f), mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, e, itr->normal, dF);
-					rA += rA_;
-					rB += rB_;
-					f_ += f_part;
+					//glm::vec3 rA_ = (itr->obj1->posW2L(itr->pos) - cA);
+					//glm::vec3 rB_ = (itr->obj2->posW2L(itr->pos) - positionPlane);
+					glm::vec3 rA_ = itr->pos - cA;
+					glm::vec3 rB_ = itr->pos - positionPlane;
+					glm::vec3 lvA = force + g;
+					glm::vec3 lvB = glm::vec3();
+					glm::vec3 aVB = glm::vec3();
+					glm::vec3 prel = get_prel(lvA, lvB, angularVelocity, aVB, rA_, rB_);
+					glm::vec3 n = itr->normal * -1;
+					float d = get_d(n, prel);
+					if (d < 0) {
+						glm::vec3 f_part = fHat(lvA, lvB, angularVelocity, aVB, mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, e, n, dF);
+						rA += rA_;
+						rB += rB_;
+						f_ += f_part;
+					}
 				}
 				f_ /= ct.size();
 				rA /= ct.size();
 				rB /= ct.size();
-				//force = f_;
-				linearMomentum += f_;
-				angularMomentum += glm::cross(rA, f_);
+				force = f_;
+				linearMomentum = f_;
+				angularMomentum = glm::cross(rA, f_);
+				//gravity = false;
 
 				/*
 				======================================================================================================================================================
