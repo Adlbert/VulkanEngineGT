@@ -71,7 +71,7 @@ namespace ve {
 		float mass = 1.0f;
 		float static_friction = 0.0f;
 		float dynamic_friction = 0.0f;
-		glm::vec3 g = glm::vec3(0, -.0981f, 0);
+		glm::vec3 g = glm::vec3(0, -0.00981f, 0);
 		glm::vec3 angularVelocity;
 		glm::mat3 inertiaTensor;
 		bool gravity = false;
@@ -112,9 +112,9 @@ namespace ve {
 
 		//f
 		glm::vec3 get_mag_imp_dirN(float e, float d, glm::vec3 n, glm::mat4 K, float dF, glm::vec3 t) {
-			float d1 = -(1 - e) * d;
+			float d1 = -(1 + e) * d;
 			glm::vec3 n_ = n - dF * t;
-			glm::vec3 d2 = glm::translate(n) * (K * glm::vec4(n_.x, n_.y, n_.z, 0.0f));
+			glm::vec3 d2 = glm::translate(n) * K * glm::vec4(n_.x, n_.y, n_.z, 0.0f);
 			return d1 / d2;
 		}
 
@@ -163,18 +163,19 @@ namespace ve {
 		void applyMovement(veEvent event, bool gravity) {
 			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
 
-			linearMomentum += (float)event.dt * mass * force;
+			if (gravity) {
+				if (eParent->getPosition().y > 1.0f) {
+					linearMomentum += (float)event.dt * mass * (g + force);
+				}
+			}
+			else {
+				linearMomentum += (float)event.dt * mass * force;
+			}
 			applyFriction();
-			if (gravity)
-				applyGravity(event);
 			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum));
 		}
 
 		void applyRotation(veEvent event) {
-			inertiaTensor = glm::mat3(
-				1.0f, -1.0f, -1.0f,
-				-1.0f, 1.0f - 1.0f,
-				-1.0f, -1.0f, 1.0f, 0.0f); //assume interia tensor is 1
 
 			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
 			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Cube0");
@@ -208,12 +209,13 @@ namespace ve {
 			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getTransform();
 			glm::vec3 positionPlane = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
 
-
-			vpe::Box cube0{ positionCube0 };
+			//lm::mat3(getSceneManagerPointer()->getSceneNode("The Cube0")->getRotation())
+			vpe::Box cube0{ positionCube0, getSceneManagerPointer()->getSceneNode("The Cube0")->getWorldRotation() };
 			vpe::Box plane{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 1.0f, 100.0f)) };
 
+
 			vec3 mtv(0, 1, 0); //minimum translation vector
-			mtv = glm::normalize(force + g) * -1;
+			mtv = glm::normalize(force + (g * -1));
 
 			bool hit = vpe::collision(cube0, plane, mtv);
 
@@ -222,7 +224,7 @@ namespace ve {
 				std::set<vpe::contact> ct;
 				//vec3 mtv(1, 0, 0);
 				vec3 mtv(0, 1, 0); //minimum translation vector
-				mtv = glm::normalize(force + g) * -1;
+				mtv = glm::normalize(force + (g * -1));
 				//glm::vec3 n = glm::normalize(g);
 
 				vpe::contacts(cube0, plane, mtv, ct);
@@ -233,13 +235,17 @@ namespace ve {
 				======================================================================================================================================================
 				*/
 
-				float e = 0.1f;
-				float dF = 1.0f;
+				float e = 0.8f;
+				float dF = 0.8f;
+
 
 				//resolv interpenetration
-				//getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->setPosition(glm::vec3(positionCube0.x, positionCube0.y + 2.0f, positionCube0.z));
-				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
+				positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
+				glm::vec3 nm = linearMomentum * -1;
+				//getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->setPosition(glm::vec3(positionCube0.x, positionCube0.y + 1.0f, positionCube0.z));
+				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), nm));
 				//getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
+				positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
 
 				//assume postion as center
 				glm::vec3 cA = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
@@ -249,9 +255,13 @@ namespace ve {
 				glm::vec3 rB = glm::vec3();
 				std::set<vpe::contact>::iterator itr;
 				for (itr = ct.begin(); itr != ct.end(); itr++) {
-					glm::vec3 rA_ = itr->pos - cA;
-					glm::vec3 rB_ = itr->pos - positionPlane;
-					glm::vec3 f_part = fHat(force + g, glm::vec3(), angularVelocity, glm::vec3(), mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, e, itr->normal, dF);
+					glm::vec3 rA_ = itr->obj1->posW2L(itr->pos) - cA;
+					glm::vec3 rB_ = itr->obj2->posW2L(itr->pos) - positionPlane;					
+					//glm::vec3 rA_ = itr->obj1->posL2W(itr->pos) - cA;
+					//glm::vec3 rB_ = itr->obj2->posL2W(itr->pos) - positionPlane;
+					//glm::vec3 rA_ = itr->pos - cA;
+					//glm::vec3 rB_ = itr->pos - positionPlane;
+					glm::vec3 f_part = fHat(force + g, glm::vec3(1.0f), angularVelocity, glm::vec3(1.0f), mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, e, itr->normal, dF);
 					rA += rA_;
 					rB += rB_;
 					f_ += f_part;
@@ -260,8 +270,14 @@ namespace ve {
 				rA /= ct.size();
 				rB /= ct.size();
 				force = f_ + g;
+				//std::cout << "Hit" << std::endl;
+				//std::cout << glm::to_string(f_) << std::endl;
+				//std::cout << glm::to_string(linearMomentum) << std::endl;
 				linearMomentum += f_;
+				//std::cout << glm::to_string(linearMomentum) << std::endl;
+				//std::cout << "" << std::endl;
 				angularMomentum += glm::cross(rA, f_);
+
 
 				/*
 				======================================================================================================================================================
@@ -276,10 +292,10 @@ namespace ve {
 
 	protected:
 		virtual void onFrameStarted(veEvent event) {
-			applyRotation(event);
+			//applyRotation(event);
 			applyMovement(event, gravity);
 			checkCollision();
-			dampenForce(0.0002f, force);
+			//dampenForce(0.2f, force);
 		};
 
 		virtual bool onKeyboard(veEvent event) {
@@ -287,9 +303,10 @@ namespace ve {
 
 			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
 				if (cube_spawned) {
-					force += glm::vec3(0.02f, 0.0f, 0.0f);
+					force += glm::vec3(0.0f, 0.0f, 0.0f);
 					gravity = true;
-					rotSpeed = (float)d(e);
+					rotSpeed = 0.5f;
+					//rotSpeed = (float)d(e);
 				}
 				else {
 					gravity = false;
@@ -298,7 +315,7 @@ namespace ve {
 					linearMomentum = glm::vec3();
 					angularMomentum = glm::vec4();
 					angularVelocity = glm::vec3();;
-					inertiaTensor = glm::mat3();
+
 					force = glm::vec3();
 					rotSpeed = 0;
 				}
@@ -314,7 +331,10 @@ namespace ve {
 			linearMomentum = glm::vec3();
 			angularMomentum = glm::vec4();
 			angularVelocity = glm::vec3();;
-			inertiaTensor = glm::mat3();
+			inertiaTensor = glm::mat3(
+				1.0f, -1.0f, -1.0f,
+				-1.0f, 1.0f - 1.0f,
+				-1.0f, -1.0f, 1.0f, 0.0f); //assume interia tensor is 1
 			force = glm::vec3();
 			rotSpeed = 0;
 		};
