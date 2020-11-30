@@ -17,7 +17,7 @@ using namespace glm;
 #include "pluecker.h"
 
 
-namespace gjk {
+namespace vpe {
 
 
     struct ICollider {

@@ -1,4 +1,4 @@
-/**
+ï»¿/**
 * The Vienna Vulkan Engine
 *
 * (c) bei Helmut Hlavacs, University of Vienna
@@ -15,7 +15,7 @@ namespace ve {
 
 
 	uint32_t g_score = 0;				//derzeitiger Punktestand
-	double g_time = 30.0;				//zeit die noch übrig ist
+	double g_time = 30.0;				//zeit die noch ï¿½brig ist
 	bool g_gameLost = false;			//true... das Spiel wurde verloren
 	bool g_restart = false;			//true...das Spiel soll neu gestartet werden
 
@@ -38,11 +38,11 @@ namespace ve {
 	};
 
 
-	static std::default_random_engine e{ 12345 };					//Für Zufallszahlen
-	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//Für Zufallszahlen
+	static std::default_random_engine e{ 12345 };					//Fï¿½r Zufallszahlen
+	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//Fï¿½r Zufallszahlen
 
 	//
-	// Überprüfen, ob die Kamera die Kiste berührt
+	// ï¿½berprï¿½fen, ob die Kamera die Kiste berï¿½hrt
 	//
 	class EventListenerCollision : public VEEventListener {
 	protected:
@@ -61,33 +61,80 @@ namespace ve {
 	};
 
 	//
-// Überprüfen, ob die Kamera die Kiste berührt
+// ï¿½berprï¿½fen, ob die Kamera die Kiste berï¿½hrt
 //
 	class EventListenerKeyboard : public VEEventListener {
 		glm::vec3 linearMomentum;
 		glm::vec3 force;
 		glm::vec3 angularMomentum;
 		float rotSpeed;
+		float mass = 1.0f;
+		float static_friction = 0.0f;
+		float dynamic_friction = 0.0f;
+		glm::vec3 g = glm::vec3(0, -9.81f, 0);
 
-	protected:
-		virtual void onFrameStarted(veEvent event) {
+	private:
+
+		void dampenForce(float dampening, glm::vec3& forcetd) {
+			glm::vec3 nextForce = forcetd - dampening * forcetd;
+			if (glm::length(nextForce) > 0) {
+				forcetd = nextForce;
+			}
+			else {
+				forcetd = glm::vec3(0, 0, 0);
+			}
+		}
+
+		glm::vec3 getFF(float friction) {
+			glm::vec3 ff = g * friction;
+			if (glm::length(linearMomentum) <= glm::length(ff))
+				return linearMomentum;
+			return ff;
+		}
+
+		void applyFriction() {
+			linearMomentum -= getFF(static_friction);
+			if (glm::length(linearMomentum) > 0) {
+				linearMomentum -= getFF(dynamic_friction);
+			}
+		}
+
+		void applyGravity(veEvent event) {
+			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
+
+			//Assume Object is in the air if y is above y
+			if (eParent->getPosition().y > 1) {
+				linearMomentum += (float)event.dt * mass* g;
+			}
+		}
+
+		void applyMovement(veEvent event) {
+			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
+
+			linearMomentum = (float)event.dt * mass * force;
+			applyFriction();
+			applyGravity(event);
+			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum));
+		}
+
+		void applyRotation(veEvent event) {
+			float inertiaTensor = 1.0f; //assume interia tensor is 1
+
 			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
 			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Cube0");
 
 			glm::vec3 position = eParent->getPosition(); //in Local Space
-			glm::mat4 orientation = eParent->getTransform(); //in Local 
+
 			//Assume that the objects center is its postion
 			glm::vec4 center = glm::vec4(position.x, position.y, position.z, 1);
-			float inertiaTensor = 1.0f; //assume interia tensor is 1
-			float mass = 1.0f;
 
+			glm::mat4 orientation = eParent->getTransform(); //in Local 
 			// Kreuzprodukt von (dem Produkt zwischen orientierungsmatrix und center vector) und dem force vector.
 			glm::vec4 c = orientation * center;
 			glm::vec3 torque = glm::cross(glm::vec3(c.x, c.y, c.z), force);
 			// mass * velocity; mass = 1;
-			linearMomentum += (float)event.dt * mass * force;
 			angularMomentum += (float)event.dt * torque; //es selbst plus delta time mal torque.
-			//orientierungsmatrix mal dem inversen inertia tensor mal der transponierten orientierungsmatrix mal dem angular momentum.
+				//orientierungsmatrix mal dem inversen inertia tensor mal der transponierten orientierungsmatrix mal dem angular momentum.
 			glm::vec3 angularVelocity = orientation * inertiaTensor * glm::transpose(orientation) * glm::vec4(angularMomentum.x, angularMomentum.y, angularMomentum.z, 1);
 
 			glm::vec4 rot4 = glm::vec4(1.0);
@@ -97,47 +144,58 @@ namespace ve {
 
 			rot3 = rot3 + float(event.dt) * glm::matrixCross3(angularVelocity) * rot3;
 			glm::mat4  rotate = glm::rotate(glm::mat4(1.0), angle, rot3);
-
-			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum));
 			e1->multiplyTransform(rotate);
-			//force += (force/10)*(-1);
-			force = glm::vec3(0, 0, 0);
+		}
 
-
-
+		void checkCollision() {
 			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
 			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getTransform();
 			glm::vec3 positionPlane = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
 
 
-			gjk::Box cube0{ positionCube0 };
-			gjk::Box plane{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 1.0f, 100.0f)) };
-			vec3 mtv(0, 1, 0); //minimum translation vector
+			vpe::Box cube0{ positionCube0 };
+			vpe::Box plane{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 1.0f, 100.0f)) };
+			
+			vec3 mtv(0,-1, 0); //minimum translation vector
 			//cube0.m_matRS = rotate;
+			glm::vec3 n = glm::normalize(g);
 
-			bool hit = gjk::collision(cube0, plane, mtv);
+			bool hit = vpe::collision(cube0, plane, mtv);
 
 
 			if (hit) {
-				std::set<gjk::contact> ct;
-				vec3 mtv(0, 1, 0);
-				gjk::contacts(cube0, plane, mtv, ct);
+				std::set<vpe::contact> ct;
+				//vec3 mtv(1, 0, 0);
+				vec3 mtv(0, -10, 0); //minimum translation vector
+				//glm::vec3 n = glm::normalize(g);
+
+				vpe::contacts(cube0, plane, mtv, ct);
 
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
 			}
+		}
 
-
+	protected:
+		virtual void onFrameStarted(veEvent event) {
+			applyRotation(event);
+			applyMovement(event);
+			//applyGravity(event);
+			checkCollision();
+			dampenForce(0.0002f, force);
+			//dampenForce(0.0002f, linearMomentum);
+			//dampenForce(0.8f, angularMomentum);
 		};
 
 		virtual bool onKeyboard(veEvent event) {
 			if (event.idata3 == GLFW_RELEASE) return false;
 
 			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
-				force = glm::vec3(0, -1, 0);
-				rotSpeed = d(e);
-
+				force += glm::vec3(20.0f, 20.0f, 0.0f);
+				rotSpeed = (float)d(e);
+				return true;
 			}
+			return false;
 		}
 
 	public:

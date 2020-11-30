@@ -17,7 +17,7 @@
 #include "collider.h"
 #include "collision.h"
 
-namespace gjk {
+namespace vpe {
 
     //a contact stores a contact point between two objects
     //normal is the contact normal pointing away from obj2
@@ -37,15 +37,15 @@ namespace gjk {
 //define a hash for struct contact
 //must be defined in namespace std
 template<>
-struct std::hash<gjk::contact> {
-    size_t operator()(const gjk::contact& c) {
-        return std::hash<std::tuple<gjk::Polytope*, gjk::Polytope*,vec3>>()(
+struct std::hash<vpe::contact> {
+    size_t operator()(const vpe::contact& c) {
+        return std::hash<std::tuple<vpe::Polytope*, vpe::Polytope*,vec3>>()(
             std::make_tuple( c.obj1, c.obj2, c.pos ) );
     }
 };
 
 
-namespace gjk {
+namespace vpe {
 
     //operator< uses hash values for contacts
     inline bool contact::operator <(const contact& c) const {

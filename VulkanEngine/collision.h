@@ -14,7 +14,7 @@
 #include "distance.h"
 
 
-namespace gjk {
+namespace vpe {
 
 
     constexpr int NUM_RANDOM_DIR = 32;

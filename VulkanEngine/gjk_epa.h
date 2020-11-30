@@ -10,7 +10,7 @@
 #include "collider.h"
 
 
-namespace gjk {
+namespace vpe {
 
 
     //Kevin's implementation of the Gilbert-Johnson-Keerthi intersection algorithm
@@ -303,7 +303,7 @@ namespace gjk {
                 faces[num_faces][3] = normalize(cross(loose_edges[i][0]-loose_edges[i][1], loose_edges[i][0]-p));
 
                 //Check for wrong normal to maintain CCW winding
-                float bias = 0.000001; //in case dot result is only slightly < 0 (because origin is on face)
+                float bias = 0.000001f; //in case dot result is only slightly < 0 (because origin is on face)
                 if(dot(faces[num_faces][0], faces[num_faces][3])+bias < 0){
                     vec3 temp = faces[num_faces][0];
                     faces[num_faces][0] = faces[num_faces][1];
