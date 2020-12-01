@@ -205,12 +205,15 @@ namespace ve {
 		}
 
 		void checkCollision() {
-			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
+			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getTransform()[3];
 			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getWorldRotation();
-			glm::vec3 positionPlane = getSceneManagerPointer()->getSceneNode("The Plane")->getPosition();
+			glm::vec3 positionPlane = glm::vec3(getSceneManagerPointer()->getSceneNode("The Plane")->getPosition());
 
 			//lm::mat3(getSceneManagerPointer()->getSceneNode("The Cube0")->getRotation())
 			vpe::Box cube0{ positionCube0, rotationCube0 };
+			//assume that the center of the plane is directly under the cube
+			positionPlane = positionCube0;
+			positionPlane.y = 0;
 			vpe::Box plane{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 1.0f, 100.0f)) };
 
 
@@ -225,8 +228,6 @@ namespace ve {
 				vec3 mtv(0, 1, 0); //minimum translation vector
 				mtv = glm::normalize(force + (g * -1));
 
-				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
-				glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
 
 				vpe::contacts(cube0, plane, mtv, ct);
 
@@ -235,21 +236,25 @@ namespace ve {
 																			 Task 7
 				======================================================================================================================================================
 				*/
+				//resolv interpenetration
+				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), mtv));
 
 				float e = 0.2f;
-				float dF = 0.4f;
-				//resolv interpenetration
+				float dF = 0.1;
 				//assume postion as center
-				//glm::vec3 cA = getSceneManagerPointer()->getSceneNode("The Cube0")->getPosition();
-				glm::vec3 cA = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getPosition();
+				glm::vec3 cA = positionCube0;
 				glm::vec3 f_ = glm::vec3(0.0f);
 				glm::vec3 rA = glm::vec3(0.0f);
 				glm::vec3 rB = glm::vec3(0.0f);
 				std::set<vpe::contact>::iterator itr;
 				for (itr = ct.begin(); itr != ct.end(); itr++) {
 					//Vectors in World Space
-					glm::vec3 rA_ = itr->pos - cA;
-					glm::vec3 rB_ = itr->pos - positionPlane;
+					glm::vec3 p = itr->obj2->posW2L(itr->pos);
+					glm::vec3 rA_ = p - cA;
+
+					p = itr->obj1->posW2L(itr->pos);
+					glm::vec3 rB_ = p - positionPlane;
+
 					glm::vec3 lvA = force + g;
 					glm::vec3 lvB = glm::vec3();
 					glm::vec3 aVB = glm::vec3();
@@ -269,11 +274,18 @@ namespace ve {
 						f_ += f_part;
 					}
 				}
+				std::cout << glm::to_string(f_) << std::endl;
+				std::cout << glm::to_string(force + g) << std::endl;
+				std::cout << glm::to_string(rA) << std::endl;
+				std::cout << glm::to_string(rB) << std::endl;
+				std::cout << std::endl;
+
+
 				f_ /= ct.size();
 				rA /= ct.size();
 				rB /= ct.size();
-				force = f_;
-				linearMomentum += f_;
+				//force += f_;
+ 				linearMomentum += f_;
 				angularMomentum += glm::cross(rA, f_);
 
 				/*
@@ -289,10 +301,11 @@ namespace ve {
 
 	protected:
 		virtual void onFrameStarted(veEvent event) {
+			checkCollision();
 			applyRotation(event);
 			applyMovement(event, gravity);
-			checkCollision();
 			dampenForce(0.002f, force);
+			dampenForce(0.002f, linearMomentum);
 		};
 
 		virtual bool onKeyboard(veEvent event) {
@@ -303,7 +316,7 @@ namespace ve {
 					force += glm::vec3(0.0f, 0.0f, 0.0f);
 					gravity = true;
 					rotSpeed = 1.5f;
-					//rotSpeed = (float)d(e);
+					rotSpeed = (float)d(e)/10;
 				}
 				else {
 					gravity = false;
