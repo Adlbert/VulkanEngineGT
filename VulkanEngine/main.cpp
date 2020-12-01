@@ -114,7 +114,7 @@ namespace ve {
 		glm::vec3 get_mag_imp_dirN(float e, float d, glm::vec3 n, glm::mat4 K, float dF, glm::vec3 t) {
 			float d1 = -(1 + e) * d;
 			glm::vec3 n_ = n - dF * t;
-			glm::vec3 d2 = glm::translate(n) * K * glm::vec4(n_.x, n_.y, n_.z, 1.0f);
+			glm::vec3 d2 = glm::translate(n) * K * glm::vec4(n_.x, n_.y, n_.z, 0.0f);
 			return d1 / d2;
 		}
 
@@ -239,8 +239,8 @@ namespace ve {
 				//resolv interpenetration
 				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), mtv));
 
-				float e = 0.2f;
-				float dF = 0.1;
+				float e = 0.1f;
+				float dF = 0.2;
 				//assume postion as center
 				glm::vec3 cA = positionCube0;
 				glm::vec3 f_ = glm::vec3(0.0f);
@@ -250,10 +250,13 @@ namespace ve {
 				for (itr = ct.begin(); itr != ct.end(); itr++) {
 					//Vectors in World Space
 					glm::vec3 p = itr->obj2->posW2L(itr->pos);
-					glm::vec3 rA_ = p - cA;
+					glm::vec3 rA_ = p - itr->obj2->pos();
 
 					p = itr->obj1->posW2L(itr->pos);
-					glm::vec3 rB_ = p - positionPlane;
+					glm::vec3 rB_ = p - itr->obj1->pos();
+
+					//rA_ = itr->obj2->posL2W(rA_);;
+					//rB_ = itr->obj1->posL2W(rB_);;
 
 					glm::vec3 lvA = force + g;
 					glm::vec3 lvB = glm::vec3();
@@ -274,19 +277,14 @@ namespace ve {
 						f_ += f_part;
 					}
 				}
-				std::cout << glm::to_string(f_) << std::endl;
-				std::cout << glm::to_string(force + g) << std::endl;
-				std::cout << glm::to_string(rA) << std::endl;
-				std::cout << glm::to_string(rB) << std::endl;
-				std::cout << std::endl;
 
 
 				f_ /= ct.size();
 				rA /= ct.size();
 				rB /= ct.size();
-				//force += f_;
- 				linearMomentum += f_;
-				angularMomentum += glm::cross(rA, f_);
+				force = f_;
+				linearMomentum = f_;
+				angularMomentum = glm::cross(rA, f_);
 
 				/*
 				======================================================================================================================================================
@@ -316,7 +314,7 @@ namespace ve {
 					force += glm::vec3(0.0f, 0.0f, 0.0f);
 					gravity = true;
 					rotSpeed = 1.5f;
-					rotSpeed = (float)d(e)/10;
+					rotSpeed = (float)d(e) / 10;
 				}
 				else {
 					gravity = false;
