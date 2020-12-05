@@ -237,7 +237,9 @@ namespace ve {
 				======================================================================================================================================================
 				*/
 				//resolv interpenetration
-				getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), mtv));
+				//works better without resolving
+				//Maybe this is resolved somewhere else 
+				//getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), mtv));
 
 				float e = 0.1f;
 				float dF = 0.2;
@@ -249,6 +251,7 @@ namespace ve {
 				std::set<vpe::contact>::iterator itr;
 				for (itr = ct.begin(); itr != ct.end(); itr++) {
 					//Vectors in World Space
+					//some how the vectors make more sense if converting them from World to Local Space
 					glm::vec3 p = itr->obj2->posW2L(itr->pos);
 					glm::vec3 rA_ = p - itr->obj2->pos();
 
