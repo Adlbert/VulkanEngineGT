@@ -80,42 +80,34 @@ namespace ve {
 			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0}
 		};
 		Node map[6][6] = {};
-		glm::ivec2 start = glm::ivec2(0, 0);
-		glm::ivec2 end = glm::ivec2(3, 5);
+		//glm::ivec2 start = glm::ivec2(0, 0);
+		//glm::ivec2 end = glm::ivec2(3, 5);
+		//glm::ivec2 start = glm::ivec2(1, 4);
+		//glm::ivec2 end = glm::ivec2(3, 3);
+		glm::ivec2 start = glm::ivec2(1, 1);
+		glm::ivec2 end = glm::ivec2(1, 4);
 
 	protected:
 		virtual void onFrameStarted(veEvent event) {
 
 		};
 
-		float route_cost() {
-			float cost = 0;
-			for (auto& n : route) {
-				cost += n->cost_so_far;
-			}
-		}
-
-		Node* lowest_cost_so_far() {
+		Node* lowest_cost_so_far(bool dijk) {
 			float minmal_cost = std::numeric_limits<float>::max();;
 			Node* lowest;
 			for (int i = 0; i < open_list.size(); i++) {
 				Node* current_node = open_list[i];
-				if (current_node->cost_so_far < minmal_cost) {
+				float cost;
+				if(dijk)
+					cost = current_node->cost_so_far;
+				else
+					cost = current_node->estimated_total_cost;
+				if (cost < minmal_cost) {
 					lowest = current_node;
-					minmal_cost = current_node->cost_so_far;
+					minmal_cost = cost;
 				}
 			}
 			return lowest;
-		}
-
-		void open_neighbors(std::vector<Node*>* open_neighbors) {
-			for (auto& o_n : open_list) {
-				std::vector<Node*> t_n;
-				neighbors(o_n, &t_n);
-				for (auto& n : t_n) {
-					open_neighbors->push_back(n);
-				}
-			}
 		}
 
 		void neighbors(Node* node, std::vector<Node*>* neighbors) {
@@ -154,7 +146,8 @@ namespace ve {
 			float i = 0;
 			while (p != start) {
 				i++;
-				p = map[node->connection.from.x][node->connection.from.y].position;
+				Node* n = &map[p.x][p.y];
+				p = map[n->connection.from.x][n->connection.from.y].position;
 			}
 			return 1 / (i * 0.4);
 		}
@@ -178,21 +171,18 @@ namespace ve {
 			open_list.push_back(start_node);
 			Node* lowest = &map[start.x][start.y];
 			while (lowest->position != end) {
-				lowest = lowest_cost_so_far();
+				lowest = lowest_cost_so_far(true);
 				std::vector<Node*> neigh;
 				neighbors(lowest, &neigh);
 				for (auto& n : neigh) {
+					n->connection.from = lowest->position;
 					n->heuristic = hops_to_start(n);
-					n->cost_so_far = lowest->cost_so_far + cost_map[n->position.x][n->position.y];
+					n->cost_so_far = lowest->cost_so_far + cost_map[n->position.y][n->position.x];
 					float estimetd_cost = (36 - closed_list.size()) * .005; // Total number of nodes - nodes visited * average cost
 					n->estimated_total_cost += n->cost_so_far + estimetd_cost * n->heuristic;
 					n->status = Open;
-					n->connection.from = lowest->position;
 					open_list.push_back(n);
 				}
-
-				//std::vector <Node*> o_n;
-				//open_neighbors(&o_n);
 
 				for (auto it = open_list.begin(); it != open_list.end(); ) {
 					if (*it == lowest) {
