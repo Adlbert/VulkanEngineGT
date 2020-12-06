@@ -149,10 +149,21 @@ namespace ve {
 			}
 		}
 
+		float hops_to_start(Node* node) {
+			glm::ivec2 p = node->position;
+			float i = 0;
+			while (p != start) {
+				i++;
+				p = map[node->connection.from.x][node->connection.from.y].position;
+			}
+			return 1 / (i * 0.4);
+		}
+
 	public:
 		///Constructor of class EventListenerCollision
 		EventListenerPathfinding(std::string name) : VEEventListener(name) {
 			open_list = std::vector<Node*>();
+		glm:ivec2 n;
 			closed_list = std::vector<Node*>();
 
 			//create starting node
@@ -171,15 +182,16 @@ namespace ve {
 				std::vector<Node*> neigh;
 				neighbors(lowest, &neigh);
 				for (auto& n : neigh) {
-					n->cost_so_far = lowest->cost_so_far + cost_map[lowest->position.x][lowest->position.y];
-					float estimetd_cost = (36 - closed_list.size()) * .5; // Total number of nodes - nodes visited * average cost
-					n->estimated_total_cost += n->cost_so_far + estimetd_cost;
+					n->heuristic = hops_to_start(n);
+					n->cost_so_far = lowest->cost_so_far + cost_map[n->position.x][n->position.y];
+					float estimetd_cost = (36 - closed_list.size()) * .005; // Total number of nodes - nodes visited * average cost
+					n->estimated_total_cost += n->cost_so_far + estimetd_cost * n->heuristic;
 					n->status = Open;
 					n->connection.from = lowest->position;
 					open_list.push_back(n);
 				}
 
-				std::vector <Node*> o_n;
+				//std::vector <Node*> o_n;
 				//open_neighbors(&o_n);
 
 				for (auto it = open_list.begin(); it != open_list.end(); ) {
@@ -192,9 +204,15 @@ namespace ve {
 					it++;
 				}
 
+				n = lowest->position;
+				while (n != start) {
+					std::cout << glm::to_string(n + 1) << std::endl;
+					n = map[n.x][n.y].connection.from;
+				}
+				std::cout << std::endl;
 			}
 
-		glm:ivec2 n = end;
+			n = end;
 			while (n != start) {
 				std::cout << glm::to_string(n + 1) << std::endl;
 				n = map[n.x][n.y].connection.from;
