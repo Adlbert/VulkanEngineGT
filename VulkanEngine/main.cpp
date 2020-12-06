@@ -41,28 +41,168 @@ namespace ve {
 	static std::default_random_engine e{ 12345 };					//F�r Zufallszahlen
 	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//F�r Zufallszahlen
 
+	enum  Status {
+		Open,
+		Closed,
+		Unvisited
+
+	};
+
+	struct Connection {
+		int from[2];
+		int to[2];
+		float cost;
+	};
+
+	struct Node {
+		glm::ivec2 position;
+		float heuristic;
+		float cost_so_far = 2.0;
+		Connection connection[4]; // 0 left, 1 top, 2 right, 3 bottom
+		float estimated_total_cost;
+		Status status = Unvisited;
+	};
+
+
 	//
-	// �berpr�fen, ob die Kamera die Kiste ber�hrt
+	// Pathfinding algorithm
 	//
-	class EventListenerCollision : public VEEventListener {
+	class EventListenerPathfinding : public VEEventListener {
+	private:
+		std::vector<Node*> open_list;
+		std::vector<Node*> closed_list;
+		std::vector<Node*> route;
+		float cost_map[6][6] = {
+			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0},
+			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
+			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0},
+			{1.0, 0.5, 0.5, 0.1, 0.1, 1.0},
+			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0}
+		};
+		Node map[6][6] = {};
+		glm::ivec2 start = glm::ivec2(0, 0);
+		glm::ivec2 end = glm::ivec2(3, 5);
+
 	protected:
 		virtual void onFrameStarted(veEvent event) {
-			static uint32_t cubeid = 0;
-
 
 		};
 
+		float route_cost() {
+			float cost = 0;
+			for (auto& n : route) {
+				cost += n->cost_so_far;
+			}
+		}
+
+		Node* lowest_cost_so_far() {
+			float minmal_cost = std::numeric_limits<float>::max();;
+			Node* lowest;
+			for (int i = 0; i < open_list.size(); i++) {
+				Node* current_node = open_list[i];
+				if (current_node->cost_so_far < minmal_cost) {
+					lowest = current_node;
+					minmal_cost = current_node->cost_so_far;
+				}
+			}
+			return lowest;
+		}
+
+		void open_neighbors(std::vector<Node*>* open_neighbors) {
+			for (auto& o_n : open_list) {
+				std::vector<Node*> t_n;
+				neighbors(o_n, &t_n);
+				for (auto& n : t_n) {
+					open_neighbors->push_back(n);
+				}
+			}
+		}
+
+		void neighbors(Node* node, std::vector<Node*>* neighbors) {
+			if (node->position.x - 1 >= 0) {
+				Node* left = &map[node->position.x - 1][node->position.y];
+				if (left->status == Unvisited) {
+					left->position = glm::ivec2(node->position.x - 1, node->position.y);
+					neighbors->push_back(left);
+				}
+			}
+			if (node->position.y - 1 >= 0) {
+				Node* top = &map[node->position.x][node->position.y - 1];
+				if (top->status == Unvisited) {
+					top->position = glm::ivec2(node->position.x, node->position.y - 1);
+					neighbors->push_back(top);
+				}
+			}
+			if (node->position.x + 1 <= 5) {
+				Node* right = &map[node->position.x + 1][node->position.y];
+				if (right->status == Unvisited) {
+					right->position = glm::ivec2(node->position.x + 1, node->position.y);
+					neighbors->push_back(right);
+				}
+			}
+			if (node->position.y + 1 <= 5) {
+				Node* bottom = &map[node->position.x][node->position.y + 1];
+				if (bottom->status == Unvisited) {
+					bottom->position = glm::ivec2(node->position.x, node->position.y + 1);
+					neighbors->push_back(bottom);
+				}
+			}
+		}
+
 	public:
 		///Constructor of class EventListenerCollision
-		EventListenerCollision(std::string name) : VEEventListener(name) { };
+		EventListenerPathfinding(std::string name) : VEEventListener(name) {
+			open_list = std::vector<Node*>();
+			closed_list = std::vector<Node*>();
+
+			//create starting node
+			Node* start_node = &map[start.x][start.y];
+			start_node->position = start;
+			//start_node.connection = NULL;
+			start_node->cost_so_far = 0.0;
+			start_node->estimated_total_cost = 0.0;
+			start_node->heuristic = 0.0;
+			start_node->status = Open;
+			//Add starting point to open list
+			open_list.push_back(start_node);
+			while (true) {
+				Node* lowest = lowest_cost_so_far();
+				if (lowest->position == end)
+					break;
+				std::vector<Node*> neigh;
+				neighbors(lowest, &neigh);
+				for (auto& n : neigh) {
+					n->cost_so_far = lowest->cost_so_far + cost_map[lowest->position.x][lowest->position.y];
+					float estimetd_cost = (36 - closed_list.size()) * .5; // Total number of nodes - nodes visited * average cost
+					n->estimated_total_cost += n->cost_so_far + estimetd_cost;
+					n->status = Open;
+					open_list.push_back(n);
+				}
+
+				std::vector <Node*> o_n;
+				open_neighbors(&o_n);
+
+				for (auto it = open_list.begin(); it != open_list.end(); ) {
+					if (*it == lowest) {
+						it = open_list.erase(it);
+						(*it)->status = Closed;
+						closed_list.push_back(*it);
+						break;
+					}
+					it++;
+				}
+
+			}
+		};
 
 		///Destructor of class EventListenerCollision
-		virtual ~EventListenerCollision() {};
+		virtual ~EventListenerPathfinding() {};
 	};
 
 	//
-// �berpr�fen, ob die Kamera die Kiste ber�hrt
-//
+	// Überprüfen, ob die Kamera die Kiste berührt
+	//
 	class EventListenerKeyboard : public VEEventListener {
 		glm::vec3 linearMomentum;
 		glm::vec3 force;
@@ -367,9 +507,7 @@ namespace ve {
 		virtual void registerEventListeners() {
 			VEEngine::registerEventListeners();
 
-			registerEventListener(new EventListenerCollision("Collision"), { veEvent::VE_EVENT_FRAME_STARTED });
-			registerEventListener(new EventListenerKeyboard("Keyboard"), { veEvent::VE_EVENT_FRAME_STARTED, veEvent::VE_EVENT_KEYBOARD });
-			registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY });
+			registerEventListener(new EventListenerPathfinding("Pathfinding"), { veEvent::VE_EVENT_FRAME_STARTED });
 		};
 
 
