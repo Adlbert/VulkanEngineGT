@@ -41,6 +41,12 @@ namespace ve {
 	static std::default_random_engine e{ 12345 };					//F�r Zufallszahlen
 	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//F�r Zufallszahlen
 
+	/*
+	======================================================================================================================================================
+																	Task 8
+	======================================================================================================================================================
+	*/
+
 	enum  Status {
 		Open,
 		Closed,
@@ -80,12 +86,12 @@ namespace ve {
 			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0}
 		};
 		Node map[6][6] = {};
-		//glm::ivec2 start = glm::ivec2(0, 0);
-		//glm::ivec2 end = glm::ivec2(3, 5);
+		glm::ivec2 start = glm::ivec2(0, 0);
+		glm::ivec2 end = glm::ivec2(3, 5);
 		//glm::ivec2 start = glm::ivec2(1, 4);
 		//glm::ivec2 end = glm::ivec2(3, 3);
-		glm::ivec2 start = glm::ivec2(1, 1);
-		glm::ivec2 end = glm::ivec2(1, 4);
+		//glm::ivec2 start = glm::ivec2(1, 1);
+		//glm::ivec2 end = glm::ivec2(1, 4);
 
 	protected:
 		virtual void onFrameStarted(veEvent event) {
@@ -98,7 +104,7 @@ namespace ve {
 			for (int i = 0; i < open_list.size(); i++) {
 				Node* current_node = open_list[i];
 				float cost;
-				if(dijk)
+				if (dijk)
 					cost = current_node->cost_so_far;
 				else
 					cost = current_node->estimated_total_cost;
@@ -171,7 +177,7 @@ namespace ve {
 			open_list.push_back(start_node);
 			Node* lowest = &map[start.x][start.y];
 			while (lowest->position != end) {
-				lowest = lowest_cost_so_far(true);
+				lowest = lowest_cost_so_far(false);
 				std::vector<Node*> neigh;
 				neighbors(lowest, &neigh);
 				for (auto& n : neigh) {
@@ -179,7 +185,7 @@ namespace ve {
 					n->heuristic = hops_to_start(n);
 					n->cost_so_far = lowest->cost_so_far + cost_map[n->position.y][n->position.x];
 					float estimetd_cost = (36 - closed_list.size()) * .005; // Total number of nodes - nodes visited * average cost
-					n->estimated_total_cost += n->cost_so_far + estimetd_cost * n->heuristic;
+					n->estimated_total_cost = n->cost_so_far + n->heuristic;
 					n->status = Open;
 					open_list.push_back(n);
 				}
@@ -194,12 +200,12 @@ namespace ve {
 					it++;
 				}
 
-				n = lowest->position;
-				while (n != start) {
-					std::cout << glm::to_string(n + 1) << std::endl;
-					n = map[n.x][n.y].connection.from;
-				}
-				std::cout << std::endl;
+				//n = lowest->position;
+				//while (n != start) {
+				//	std::cout << glm::to_string(n + 1) << std::endl;
+				//	n = map[n.x][n.y].connection.from;
+				//}
+				//std::cout << std::endl;
 			}
 
 			n = end;
@@ -214,6 +220,12 @@ namespace ve {
 		///Destructor of class EventListenerCollision
 		virtual ~EventListenerPathfinding() {};
 	};
+
+	/*
+	======================================================================================================================================================
+																/Task 8
+	======================================================================================================================================================
+	*/
 
 	//
 	// Überprüfen, ob die Kamera die Kiste berührt
@@ -386,11 +398,6 @@ namespace ve {
 
 				vpe::contacts(cube0, plane, mtv, ct);
 
-				/*
-				======================================================================================================================================================
-																			 Task 7
-				======================================================================================================================================================
-				*/
 				//resolv interpenetration
 				//works better without resolving
 				//Maybe this is resolved somewhere else 
@@ -443,12 +450,6 @@ namespace ve {
 				force = f_;
 				linearMomentum = f_;
 				angularMomentum = glm::cross(rA, f_);
-
-				/*
-				======================================================================================================================================================
-																			/Task 7
-				======================================================================================================================================================
-				*/
 
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
