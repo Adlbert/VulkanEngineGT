@@ -49,8 +49,7 @@ namespace ve {
 	};
 
 	struct Connection {
-		int from[2];
-		int to[2];
+		glm::ivec2 from;
 		float cost;
 	};
 
@@ -58,7 +57,7 @@ namespace ve {
 		glm::ivec2 position;
 		float heuristic;
 		float cost_so_far = 2.0;
-		Connection connection[4]; // 0 left, 1 top, 2 right, 3 bottom
+		Connection connection;
 		float estimated_total_cost;
 		Status status = Unvisited;
 	};
@@ -166,10 +165,9 @@ namespace ve {
 			start_node->status = Open;
 			//Add starting point to open list
 			open_list.push_back(start_node);
-			while (true) {
-				Node* lowest = lowest_cost_so_far();
-				if (lowest->position == end)
-					break;
+			Node* lowest = &map[start.x][start.y];
+			while (lowest->position != end) {
+				lowest = lowest_cost_so_far();
 				std::vector<Node*> neigh;
 				neighbors(lowest, &neigh);
 				for (auto& n : neigh) {
@@ -177,11 +175,12 @@ namespace ve {
 					float estimetd_cost = (36 - closed_list.size()) * .5; // Total number of nodes - nodes visited * average cost
 					n->estimated_total_cost += n->cost_so_far + estimetd_cost;
 					n->status = Open;
+					n->connection.from = lowest->position;
 					open_list.push_back(n);
 				}
 
 				std::vector <Node*> o_n;
-				open_neighbors(&o_n);
+				//open_neighbors(&o_n);
 
 				for (auto it = open_list.begin(); it != open_list.end(); ) {
 					if (*it == lowest) {
@@ -194,6 +193,14 @@ namespace ve {
 				}
 
 			}
+
+		glm:ivec2 n = end;
+			while (n != start) {
+				std::cout << glm::to_string(n + 1) << std::endl;
+				n = map[n.x][n.y].connection.from;
+			}
+
+
 		};
 
 		///Destructor of class EventListenerCollision
