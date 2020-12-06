@@ -62,7 +62,7 @@ namespace ve {
 	struct Node {
 		glm::ivec2 position;
 		float heuristic;
-		float cost_so_far = 2.0;
+		float cost_so_far = std::numeric_limits<float>::max();
 		Connection connection;
 		float estimated_total_cost;
 		Status status = Unvisited;
