@@ -19,27 +19,37 @@ namespace ve {
 	bool g_gameLost = false;			//true... das Spiel wurde verloren
 	bool g_restart = false;			//true...das Spiel soll neu gestartet werden
 
+	static std::default_random_engine e{ 12345 };					//F�r Zufallszahlen
+	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//F�r Zufallszahlen
+
 	//
-	//Zeichne das GUI
+	//Perform Actions for NPCS
 	//
-	class EventListenerGUI : public VEEventListener {
+	class EventListenerNPC : public VEEventListener {
+	private:
+		void MoveTowardsEnemy() {
+
+		}
+		void MoveTowardsEnemyFlag() {}
+		void MoveTowardsOwnFlag() {}
+		void Heal() {}
+		void Shoot() {}
+		void Melee() {}
+		void Flank() {}
+		void Reload() {}
+		void Idle() {}
+
 	protected:
-
-
-		virtual void onDrawOverlay(veEvent event) {
+		virtual void onFrameStarted(veEvent event) {
 		}
 
 	public:
 		///Constructor of class EventListenerGUI
-		EventListenerGUI(std::string name) : VEEventListener(name) { };
+		EventListenerNPC(std::string name) : VEEventListener(name) { };
 
 		///Destructor of class EventListenerGUI
-		virtual ~EventListenerGUI() {};
+		virtual ~EventListenerNPC() {};
 	};
-
-
-	static std::default_random_engine e{ 12345 };					//F�r Zufallszahlen
-	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//F�r Zufallszahlen
 
 	/*
 	======================================================================================================================================================
@@ -47,56 +57,55 @@ namespace ve {
 	======================================================================================================================================================
 	*/
 
-	enum  Status {
-		Open,
-		Closed,
-		Unvisited
-
-	};
-
-	struct Connection {
-		glm::ivec2 from;
-		float cost;
-	};
-
-	struct Node {
-		glm::ivec2 position;
-		float heuristic;
-		float cost_so_far = std::numeric_limits<float>::max();
-		Connection connection;
-		float estimated_total_cost;
-		Status status = Unvisited;
-	};
-
 
 	//
 	// Pathfinding algorithm
 	//
-	class EventListenerPathfinding : public VEEventListener {
+	class Pathfinder {
 	private:
+		enum  Status {
+			Open,
+			Closed,
+			Unvisited
+
+		};
+
+		struct Connection {
+			glm::ivec2 from;
+			float cost;
+		};
+
+		struct Node {
+			glm::ivec2 position;
+			float heuristic;
+			float cost_so_far = std::numeric_limits<float>::max();
+			Connection connection;
+			float estimated_total_cost;
+			Status status = Unvisited;
+		};
+
 		std::vector<Node*> open_list;
 		std::vector<Node*> closed_list;
 		std::vector<Node*> route;
-		float cost_map[6][6] = {
-			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0},
-			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
-			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0},
-			{1.0, 0.5, 0.5, 0.1, 0.1, 1.0},
-			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0},
-			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0}
+		float cost_map[12][12] = {
+			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1, 0.1, 0.5, 1.0, 1.0},
+			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0, 1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
+			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
+			{1.0, 0.5, 0.5, 0.1, 0.1, 1.0, 1.0, 1.0, 0.5, 0.1, 0.1, 1.0},
+			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0, 0.5, 0.5, 0.1, 0.1, 1.0},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0, 0.1, 0.1, 0.1, 0.1, 1.0},
+			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
+			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0, 0.5, 0.5, 0.1, 0.1, 1.0},
+			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0, 1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
+			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1, 0.1, 0.5, 1.0, 1.0},
+			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
+			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0, 0.5, 0.5, 0.1, 0.1, 1.0},
 		};
-		Node map[6][6] = {};
-		glm::ivec2 start = glm::ivec2(0, 0);
-		glm::ivec2 end = glm::ivec2(3, 5);
-		//glm::ivec2 start = glm::ivec2(1, 4);
-		//glm::ivec2 end = glm::ivec2(3, 3);
-		//glm::ivec2 start = glm::ivec2(1, 1);
-		//glm::ivec2 end = glm::ivec2(1, 4);
+		Node map[12][12] = {};
+		glm::ivec2 start;
+		glm::ivec2 end;
 
 	protected:
-		virtual void onFrameStarted(veEvent event) {
-
-		};
 
 		Node* lowest_cost_so_far(bool dijk) {
 			float minmal_cost = std::numeric_limits<float>::max();;
@@ -159,22 +168,9 @@ namespace ve {
 		}
 
 	public:
-		///Constructor of class EventListenerCollision
-		EventListenerPathfinding(std::string name) : VEEventListener(name) {
-			open_list = std::vector<Node*>();
-		glm:ivec2 n;
-			closed_list = std::vector<Node*>();
 
-			//create starting node
-			Node* start_node = &map[start.x][start.y];
-			start_node->position = start;
-			//start_node.connection = NULL;
-			start_node->cost_so_far = 0.0;
-			start_node->estimated_total_cost = 0.0;
-			start_node->heuristic = 0.0;
-			start_node->status = Open;
-			//Add starting point to open list
-			open_list.push_back(start_node);
+		std::vector<glm::ivec2> execude() {
+			glm::ivec2 n;
 			Node* lowest = &map[start.x][start.y];
 			while (lowest->position != end) {
 				lowest = lowest_cost_so_far(false);
@@ -199,26 +195,40 @@ namespace ve {
 					}
 					it++;
 				}
-
-				//n = lowest->position;
-				//while (n != start) {
-				//	std::cout << glm::to_string(n + 1) << std::endl;
-				//	n = map[n.x][n.y].connection.from;
-				//}
-				//std::cout << std::endl;
 			}
 
 			n = end;
+			std::vector<glm::ivec2> result = std::vector<glm::ivec2>();
 			while (n != start) {
 				std::cout << glm::to_string(n + 1) << std::endl;
+				result.push_back(n);
 				n = map[n.x][n.y].connection.from;
 			}
+			std::reverse(result.begin(), result.end());
+			return result;
+		}
 
+		///Constructor of class EventListenerCollision
+		Pathfinder(glm::ivec2 start, glm::ivec2 end) {
+			open_list = std::vector<Node*>();
+			closed_list = std::vector<Node*>();
 
+			this->start = start;
+			this->end = end;
+
+			//create starting node
+			Node* start_node = &map[start.x][start.y];
+			start_node->position = start;
+			start_node->cost_so_far = 0.0;
+			start_node->estimated_total_cost = 0.0;
+			start_node->heuristic = 0.0;
+			start_node->status = Open;
+			//Add starting point to open list
+			open_list.push_back(start_node);
 		};
 
 		///Destructor of class EventListenerCollision
-		virtual ~EventListenerPathfinding() {};
+		virtual ~Pathfinder() {};
 	};
 
 	/*
@@ -227,9 +237,6 @@ namespace ve {
 	======================================================================================================================================================
 	*/
 
-	//
-	// Überprüfen, ob die Kamera die Kiste berührt
-	//
 	class EventListenerKeyboard : public VEEventListener {
 		glm::vec3 linearMomentum;
 		glm::vec3 force;
@@ -523,7 +530,7 @@ namespace ve {
 		virtual void registerEventListeners() {
 			VEEngine::registerEventListeners();
 
-			registerEventListener(new EventListenerPathfinding("Pathfinding"), { veEvent::VE_EVENT_FRAME_STARTED });
+			registerEventListener(new EventListenerNPC("NPC"), { veEvent::VE_EVENT_FRAME_STARTED });
 		};
 
 
@@ -551,11 +558,23 @@ namespace ve {
 			VECHECKPOINTER(pE4 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Plane/plane_t_n_s.obj/plane/Entity_0"));
 			pE4->setParam(glm::vec4(1000.0f, 1000.0f, 0.0f, 0.0f));
 
-			VESceneNode* e1, * e1Parent;
-			e1Parent = getSceneManagerPointer()->createSceneNode("The Cube0 Parent", pScene, glm::mat4(1.0));
-			VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube0", "media/models/test/crate0", "cube.obj"));
-			e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f, 5.0f, 10.0f)));
-			e1Parent->addChild(e1);
+			//Generate Red Team
+			for (int i = 0; i < 5; i++) {
+				VESceneNode* e1, * e1Parent;
+				e1Parent = getSceneManagerPointer()->createSceneNode("The Cube" + std::to_string(i) + " Parent", pScene, glm::mat4(1.0));
+				VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube" + std::to_string(i), "media/models/test/crate_red", "cube.obj"));
+				e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f + i*2, 1.0f, 10.0f)));
+				e1Parent->addChild(e1);
+			}
+
+			//Generate Blue Team
+			for (int i = 5; i < 10; i++) {
+				VESceneNode* e1, * e1Parent;
+				e1Parent = getSceneManagerPointer()->createSceneNode("The Cube" + std::to_string(i) + "  Parent", pScene, glm::mat4(1.0));
+				VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube" + std::to_string(i), "media/models/test/crate_blue", "cube.obj"));
+				e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f + i*2 - 5*2, 1.0f, -10.0f)));
+				e1Parent->addChild(e1);
+			}
 
 			m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
 		};
