@@ -22,6 +22,7 @@ namespace ve {
 	static std::default_random_engine e{ 12345 };					//F�r Zufallszahlen
 	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//F�r Zufallszahlen
 
+	//Implemented MoveTowardsEnemyFlag and MoveTowardsOwnFlag
 	enum class Action {
 		None = 0,
 		MoveTowardsEnemyFlag = 1,
