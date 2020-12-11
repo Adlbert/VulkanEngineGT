@@ -160,21 +160,32 @@ namespace ve {
 		std::vector<Node*> open_list;
 		std::vector<Node*> closed_list;
 		std::vector<Node*> route;
-		float cost_map[8][7] = {
+
+		static const int MAP_HEIGHT = 8;
+		static const int MAP_WIDTH = 7;
+
+		float cost_map[MAP_HEIGHT][MAP_WIDTH] = {
 			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0},
-			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0, 1.0},
-			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 1.0},
-			{1.0, 0.5, 0.5, 0.1, 0.1, 1.0, 1.0},
-			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0},
+			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0, 0.1},
+			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 0.1},
+			{1.0, 0.5, 0.5, 0.1, 0.1, 1.0, 0.1},
+			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 0.5},
 			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
-			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 1.0},
-			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 0.1},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
 		};
-		Node map[8][7] = {};
+		Node map[MAP_HEIGHT][MAP_WIDTH] = {};
 		glm::ivec2 start;
 		glm::ivec2 end;
+		//glm::ivec2 start = glm::ivec2(1, 4);
+		//glm::ivec2 end = glm::ivec2(3, 3);
+		//glm::ivec2 start = glm::ivec2(1, 1);
+		//glm::ivec2 end = glm::ivec2(1, 4);
 
 	protected:
+		virtual void onFrameStarted(veEvent event) {
+
+		};
 
 		Node* lowest_cost_so_far(bool dijk) {
 			float minmal_cost = std::numeric_limits<float>::max();;
@@ -196,28 +207,28 @@ namespace ve {
 
 		void neighbors(Node* node, std::vector<Node*>* neighbors) {
 			if (node->position.x - 1 >= 0) {
-				Node* left = &map[node->position.x - 1][node->position.y];
+				Node* left = &map[node->position.y][node->position.x - 1];
 				if (left->status == Unvisited) {
 					left->position = glm::ivec2(node->position.x - 1, node->position.y);
 					neighbors->push_back(left);
 				}
 			}
 			if (node->position.y - 1 >= 0) {
-				Node* top = &map[node->position.x][node->position.y - 1];
+				Node* top = &map[node->position.y - 1][node->position.x];
 				if (top->status == Unvisited) {
 					top->position = glm::ivec2(node->position.x, node->position.y - 1);
 					neighbors->push_back(top);
 				}
 			}
-			if (node->position.x + 1 <= 6) {
-				Node* right = &map[node->position.x + 1][node->position.y];
+			if (node->position.x + 1 <= MAP_WIDTH - 1) {
+				Node* right = &map[node->position.y][node->position.x + 1];
 				if (right->status == Unvisited) {
 					right->position = glm::ivec2(node->position.x + 1, node->position.y);
 					neighbors->push_back(right);
 				}
 			}
-			if (node->position.y + 1 <= 7) {
-				Node* bottom = &map[node->position.x][node->position.y + 1];
+			if (node->position.y + 1 <= MAP_HEIGHT - 1) {
+				Node* bottom = &map[node->position.y + 1][node->position.x];
 				if (bottom->status == Unvisited) {
 					bottom->position = glm::ivec2(node->position.x, node->position.y + 1);
 					neighbors->push_back(bottom);
@@ -228,37 +239,33 @@ namespace ve {
 		float hops_to_start(Node* node) {
 			glm::ivec2 p = node->position;
 			float i = 0;
+			//p != start
+			//p.x != start.x && p.y != start.y
 			while (p != start) {
 				i++;
-				Node* n = &map[p.x][p.y];
-				p = map[n->connection.from.x][n->connection.from.y].position;
+				Node* n = &map[p.y][p.x];
+				p = map[n->connection.from.y][n->connection.from.x].position;
 			}
 			return 1 / (i * 0.4);
 		}
 
 	public:
-
-		std::vector<glm::ivec2> execude(glm::ivec2 start, glm::ivec2 end) {
-			this->start = start;
-			this->end = end;
-
-			//open_list.clear();
-			//closed_list.clear();
-			//route.clear();
+		std::vector<glm::ivec2> result;
 
 
+		std::vector < glm::ivec2> execude() {
+			glm::ivec2 n;
 			//create starting node
 			Node* start_node = &map[start.x][start.y];
 			start_node->position = start;
+			//start_node.connection = NULL;
 			start_node->cost_so_far = 0.0;
 			start_node->estimated_total_cost = 0.0;
 			start_node->heuristic = 0.0;
 			start_node->status = Open;
 			//Add starting point to open list
 			open_list.push_back(start_node);
-			glm::ivec2 n;
 			Node* lowest = &map[start.x][start.y];
-			bool w = !(lowest->position.x != end.x && lowest->position.y != end.y);
 			while (lowest->position != end) {
 				lowest = lowest_cost_so_far(false);
 				std::vector<Node*> neigh;
@@ -267,7 +274,7 @@ namespace ve {
 					n->connection.from = lowest->position;
 					n->heuristic = hops_to_start(n);
 					n->cost_so_far = lowest->cost_so_far + cost_map[n->position.y][n->position.x];
-					float estimetd_cost = (36 - closed_list.size()) * .005; // Total number of nodes - nodes visited * average cost
+					float estimetd_cost = (MAP_HEIGHT * MAP_WIDTH - closed_list.size()) * .005; // Total number of nodes - nodes visited * average cost
 					n->estimated_total_cost = n->cost_so_far + n->heuristic;
 					n->status = Open;
 					open_list.push_back(n);
@@ -275,8 +282,72 @@ namespace ve {
 
 				for (auto it = open_list.begin(); it != open_list.end(); ) {
 					if (*it == lowest) {
-						closed_list.push_back(*it);
+						it = open_list.erase(it);
 						(*it)->status = Closed;
+						closed_list.push_back(*it);
+						break;
+					}
+					it++;
+				}
+
+				//n = lowest->position;
+				//while (n != start) {
+				//	std::cout << glm::to_string(n + 1) << std::endl;
+				//	n = map[n.x][n.y].connection.from;
+				//}
+				//std::cout << std::endl;
+			}
+
+			n = end;
+			std::vector<glm::ivec2> result;
+			while (n != start) {
+				std::cout << glm::to_string(n + 1) << std::endl;
+				n = map[n.x][n.y].connection.from;
+				result.push_back(n);
+			}
+			std::reverse(result.begin(), result.end());
+			return result;
+		}
+
+		///Constructor of class EventListenerCollision
+		Pathfinder(glm::ivec2 _start, glm::ivec2 _end) {
+			this->start = _start;
+			this->end = _end;
+			open_list = std::vector<Node*>();
+			closed_list = std::vector<Node*>();
+
+			glm::ivec2 n;
+			//create starting node
+			Node* start_node = &map[start.y][start.x];
+			start_node->position = start;
+			//start_node.connection = NULL;
+			start_node->cost_so_far = 0.0;
+			start_node->estimated_total_cost = 0.0;
+			start_node->heuristic = 0.0;
+			start_node->status = Open;
+			//Add starting point to open list
+			open_list.push_back(start_node);
+			Node* lowest = &map[start.y][start.x];
+			//lowest->position.x != end.x && lowest->position.y != end.y
+			//(lowest->position != end)
+			while (lowest->position != end && open_list.size() > 0) {
+				lowest = lowest_cost_so_far(true);
+				std::vector<Node*> neigh;
+				neighbors(lowest, &neigh);
+				for (auto& n : neigh) {
+					n->connection.from = lowest->position;
+					n->heuristic = hops_to_start(n);
+					n->cost_so_far = lowest->cost_so_far + cost_map[n->position.y][n->position.x];
+					float estimetd_cost = (MAP_HEIGHT * MAP_WIDTH - closed_list.size()) * .005; // Total number of nodes - nodes visited * average cost
+					n->estimated_total_cost = n->cost_so_far + n->heuristic;
+					n->status = Open;
+					open_list.push_back(n);
+				}
+
+				for (auto it = open_list.begin(); it != open_list.end(); ) {
+					if (*it == lowest) {
+						(*it)->status = Closed;
+						closed_list.push_back(*it);
 						it = open_list.erase(it);
 						break;
 					}
@@ -285,27 +356,17 @@ namespace ve {
 			}
 
 			n = end;
-			std::vector<glm::ivec2> result = std::vector<glm::ivec2>();
+			result.push_back(n);
 			while (n != start) {
-				std::cout << glm::to_string(n + 1) << std::endl;
+				//std::cout << glm::to_string(n + 1) << std::endl;
+				n = map[n.y][n.x].connection.from;
 				result.push_back(n);
-				n = map[n.x][n.y].connection.from;
 			}
 			std::reverse(result.begin(), result.end());
-			return result;
-		}
-
-		///Constructor of class EventListenerCollision
-		Pathfinder() {
-			open_list = std::vector<Node*>();
-			closed_list = std::vector<Node*>();
 		};
 
 		///Destructor of class EventListenerCollision
-		~Pathfinder() {
-			open_list.clear();
-			closed_list.clear();
-		};
+		~Pathfinder() {};
 	};
 
 	class Agent {
@@ -356,7 +417,7 @@ namespace ve {
 			DecisionTree::Node* node = dT.m_RootNode;
 			while (result == ve::Action::None) {
 				float agent_value = getFeature(node->Feature);
-				bool decision;
+				bool decision = false;
 				switch (node->Comperator) {
 				case Comperator::Equal:
 					decision = agent_value == node->Value;
@@ -411,84 +472,96 @@ namespace ve {
 	class EventListenerNPC : public VEEventListener {
 	private:
 
-		Agent createAgent(int i, VESceneNode* parent) {
-			Agent agent = Agent();
-			agent.name = "Agent" + std::to_string(i);
-			agent.position = glm::ivec2(parent->getPosition().x, parent->getPosition().z);
-			agent.health = 25;
-			agent.ammu = 2;
-			agent.enemyDist = 7;
-			agent.distToFlag = 7;
-			agent.dT = DecisionTree::LoadTree("media/DT.txt");
+		Agent* createAgent(int i, VESceneNode* parent) {
+			Agent* agent = new Agent();
+			agent->name = "Agent" + std::to_string(i);
+			agent->position = glm::ivec2(parent->getPosition().x, parent->getPosition().z);
+			agent->health = 25;
+			agent->ammu = 2;
+			agent->enemyDist = 7;
+			agent->distToFlag = 7;
+			agent->dT = DecisionTree::LoadTree("media/DT.txt");
 			return agent;
 		}
 
 
-		std::vector<Agent> blueTeam;
-		std::vector<Agent> redTeam;
+		std::vector<Agent*> blueTeam;
+		std::vector<Agent*> redTeam;
 
-		void executeDT(Agent agent) {
-			Action action = agent.makeDecision();
+		void executeDT(Agent* agent) {
+			Action action = agent->makeDecision();
 			switch (action) {
 			case Action::None:
 			case Action::Idle:
-				agent.Idle();
+				agent->Idle();
 				break;
 			case Action::Flank:
-				agent.Flank();
+				agent->Flank();
 				break;
 			case Action::Heal:
-				agent.Heal();
+				agent->Heal();
 				break;
 			case Action::Melee:
-				agent.Melee();
+				agent->Melee();
 				break;
 			case Action::MoveTowardsEnemy:
-				agent.MoveTowardsEnemy();
+				agent->MoveTowardsEnemy();
 				break;
 			case Action::MoveTowardsEnemyFlag:
-				agent.MoveTowardsEnemyFlag();
+				agent->MoveTowardsEnemyFlag();
 				break;
 			case Action::MoveTowardsOwnFlag:
-				agent.MoveTowardsOwnFlag();
+				agent->MoveTowardsOwnFlag();
 				break;
 			case Action::Reload:
-				agent.Reload();
+				agent->Reload();
 				break;
 			case Action::Shoot:
-				agent.Shoot();
+				agent->Shoot();
 				break;
 			}
 		}
 
-		void prepareDecsion(Agent agent, std::vector<Agent> enemyTeam, glm::ivec2 captureFlagPos) {
-			Pathfinder* pf = new Pathfinder();
+		void prepareDecsion(Agent* agent, std::vector<Agent*> enemyTeam, glm::ivec2 captureFlagPos) {
 			float minDistance = std::numeric_limits<float>::max();
-			for (Agent enemy : enemyTeam) {
-				std::vector<glm::ivec2> pathToEnemy = pf->execude(agent.position, enemy.position);
+			for (Agent* enemy : enemyTeam) {
+				Pathfinder* pf = new Pathfinder(agent->position, enemy->position);
+				std::vector<glm::ivec2> pathToEnemy = pf->result;
 				float distance = pathToEnemy.size();
 				if (distance < minDistance) {
 					minDistance = distance;
-					agent.nextPositionToMoveToEnemy = pathToEnemy[0];
+					agent->nextPositionToMoveToEnemy = pathToEnemy[0];
 				}
+				delete pf;
 			}
-			agent.enemyDist = minDistance;
-			std::vector<glm::ivec2> pathToFlag = pf->execude(agent.position, captureFlagPos);
-			agent.distToFlag = pathToFlag.size();
-			agent.nextPositionToMoveToFlag = pathToFlag[0];
+			agent->enemyDist = minDistance;
+			Pathfinder* pf = new Pathfinder(agent->position, captureFlagPos);
+			std::vector<glm::ivec2> pathToFlag = pf->result;
+			agent->distToFlag = pathToFlag.size();
+			agent->nextPositionToMoveToFlag = pathToFlag[1];
 			delete pf;
 		}
 
 	protected:
 
 		virtual void onFrameStarted(veEvent event) {
-			for (Agent agent : redTeam) {
+			if (g_gameLost)
+				return;
+			for (Agent* agent : redTeam) {
 				prepareDecsion(agent, blueTeam, glm::ivec2(0, 3));
 				executeDT(agent);
+				if (agent->position == glm::ivec2(0, 3)) {
+					std::cout << "Red Team Won" << std::endl;
+					g_gameLost = true;
+				}
 			}
-			for (Agent agent : blueTeam) {
+			for (Agent* agent : blueTeam) {
 				prepareDecsion(agent, redTeam, glm::ivec2(7, 3));
 				executeDT(agent);
+				if (agent->position == glm::ivec2(7, 3)) {
+					std::cout << "Blue Team Won" << std::endl;
+					g_gameLost = true;
+				}
 			}
 		}
 
