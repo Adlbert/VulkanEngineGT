@@ -22,32 +22,289 @@ namespace ve {
 	static std::default_random_engine e{ 12345 };					//F�r Zufallszahlen
 	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//F�r Zufallszahlen
 
+	enum class Action {
+		None = 0,
+		MoveTowardsEnemyFlag = 1,
+		MoveTowardsOwnFlag = 2,
+		Heal = 3,
+		Shoot = 4,
+		Melee = 5,
+		Flank = 6,
+		Reload = 7,
+		Idle = 8,
+		MoveTowardsEnemy = 9,
+	};
+
+	enum class Feature {
+		Health = 0,
+		Ammu = 1,
+		EnemyDist = 2,
+		TeamMateDist = 3,
+		DistToFlag = 4
+	};
+
+	enum class Comperator {
+		Less = 0,
+		LessOrEqual = 1,
+		Equal = 2,
+		GreaterOrEqual = 3,
+		Greater = 4
+	};
+
+	class DecisionTree {
+	public:
+		struct BaseNode {
+			std::string Id;
+			std::string Decision;
+			Feature Feature;
+			Comperator Comperator;
+			float Value;
+		};
+		struct Node : BaseNode {
+			Node* BranchTrue = nullptr;
+			Node* BranchFalse = nullptr;
+			Action ActionTrue;
+			Action ActionFalse;
+		};
+
+		Node* m_RootNode;
+		std::unordered_map<std::string, Node*> Nodemap;
+
+		//DecisionTree() {
+		//	m_RootNode = nullptr;
+		//};
+		//DecisionTree(const DecisionTree&);
+		//~DecisionTree() {};
+
+		static void createNode(DecisionTree* dT, Node* node, std::vector<std::string> tokens) {
+			std::vector<std::string> leafs;
+			for (auto i = std::strtok(&tokens[4][0], "|"); i != NULL; i = std::strtok(NULL, "|"))
+				leafs.push_back(i);
+
+			node->Id = tokens[0];
+			node->Feature = Feature(std::stoi(tokens[1]));
+			node->Comperator = Comperator(std::stoi(tokens[2]));
+			node->Value = std::stof(tokens[3]);
+			if (std::isdigit(leafs[0][0])) {
+				node->ActionTrue = Action(std::stoi(leafs[0]));
+			}
+			else {
+				node->BranchTrue = new DecisionTree::Node();
+				node->BranchTrue->Id = leafs[0];
+				dT->Nodemap.insert(std::pair<std::string, Node*>(leafs[0], node->BranchTrue));
+			}
+			if (std::isdigit(leafs[1][0])) {
+				node->ActionFalse = Action(std::stoi(leafs[1]));
+			}
+			else {
+				node->BranchFalse = new DecisionTree::Node();
+				node->BranchFalse->Id = leafs[1];
+				dT->Nodemap.insert(std::pair<std::string, Node*>(leafs[1], node->BranchFalse));
+			}
+			dT->Nodemap.insert(std::pair<std::string, Node*>(tokens[0], node));
+		}
+
+		static DecisionTree LoadTree(std::string filename) {
+			std::string line;
+			std::ifstream file(filename);
+			DecisionTree dT = DecisionTree();
+			while (file.is_open()) {
+				//Id*Feature*Comperator*Value*Action(True|False)
+				while (std::getline(file, line)) {
+					// Vector to store tokens
+					std::vector<std::string> tokens;
+
+					for (auto i = std::strtok(&line[0], "*"); i != NULL; i = std::strtok(NULL, "*"))
+						tokens.push_back(i);
+					if (dT.m_RootNode == nullptr) {
+						dT.m_RootNode = new DecisionTree::Node();
+						createNode(&dT, dT.m_RootNode, tokens);
+					}
+					else {
+						std::string id = tokens[0];
+						createNode(&dT, dT.Nodemap.find(id)->second, tokens);
+					}
+				}
+				file.close();
+			}
+			return dT;
+		}
+	};
+
+	class Agent {
+	private:
+	public:
+		glm::ivec2 position;
+		std::string name;
+		float health;
+		float ammu;
+		float distToFlag;
+		float enemyDist;
+		DecisionTree dT;
+
+		void MoveTowardsEnemy() {
+			std::cout << "MoveTowardsEnemy" << std::endl;
+		}
+		void MoveTowardsEnemyFlag() {
+			std::cout << "MoveTowardsEnemyFlag" << std::endl;
+		}
+		void MoveTowardsOwnFlag() {
+			std::cout << "MoveTowardsOwnFlag" << std::endl;
+		}
+		void Heal() {
+			std::cout << "Heal" << std::endl;
+		}
+		void Shoot() {
+			std::cout << "Shoot" << std::endl;
+		}
+		void Melee() {
+			std::cout << "Melee" << std::endl;
+		}
+		void Flank() {
+			std::cout << "Flank" << std::endl;
+		}
+		void Reload() {
+			std::cout << "Reload" << std::endl;
+		}
+		void Idle() {
+			std::cout << "Idle" << std::endl;
+		}
+
+		Action makeDecision() {
+			Action result = ve::Action::None;
+			DecisionTree::Node* node = dT.m_RootNode;
+			while (result == ve::Action::None) {
+				float agent_value = getFeature(node->Feature);
+				bool decision;
+				switch (node->Comperator) {
+				case Comperator::Equal:
+					decision = agent_value == node->Value;
+					break;
+				case Comperator::Greater:
+					decision = agent_value > node->Value;
+					break;
+				case Comperator::GreaterOrEqual:
+					decision = agent_value >= node->Value;
+					break;
+				case Comperator::Less:
+					decision = agent_value < node->Value;
+					break;
+				case Comperator::LessOrEqual:
+					decision = agent_value <= node->Value;
+					break;
+				}
+				if (decision) {
+					result = node->ActionTrue;
+					node = node->BranchTrue;
+				}
+				else {
+					result = node->ActionFalse;
+					node = node->BranchFalse;
+				}
+			}
+			return result;
+		}
+
+		float getFeature(Feature feature) {
+			switch (feature) {
+			case Feature::Health:
+				return health;
+			case Feature::Ammu:
+				return health;
+			case Feature::EnemyDist:
+				return health;
+			case Feature::TeamMateDist:
+				return health;
+			case Feature::DistToFlag:
+				return health;
+			}
+		}
+	};
+
+
+	
+
 	//
 	//Perform Actions for NPCS
 	//
 	class EventListenerNPC : public VEEventListener {
 	private:
-		void MoveTowardsEnemy() {
 
+		Agent createAgent(int i, VESceneNode* parent) {
+			Agent agent = Agent();
+			agent.name = "Agent" + std::to_string(i);
+			agent.position = glm::ivec2(parent->getPosition().x, parent->getPosition().z);
+			agent.health = 25;
+			agent.ammu = 2;
+			agent.enemyDist = 7;
+			agent.distToFlag = 7;
+			agent.dT = DecisionTree::LoadTree("media/DT.txt");
+			return agent;
 		}
-		void MoveTowardsEnemyFlag() {}
-		void MoveTowardsOwnFlag() {}
-		void Heal() {}
-		void Shoot() {}
-		void Melee() {}
-		void Flank() {}
-		void Reload() {}
-		void Idle() {}
+
+
+		std::vector<Agent> blueTeam;
+		std::vector<Agent> redTeam;
+
+		void executeDT(Agent agent) {
+			Action action = agent.makeDecision();
+			switch (action) {
+			case Action::None:
+			case Action::Idle:
+				agent.Idle();
+				break;
+			case Action::Flank:
+				agent.Flank();
+				break;
+			case Action::Heal:
+				agent.Heal();
+				break;
+			case Action::Melee:
+				agent.Melee();
+				break;
+			case Action::MoveTowardsEnemy:
+				agent.MoveTowardsEnemy();
+				break;
+			case Action::MoveTowardsEnemyFlag:
+				agent.MoveTowardsEnemyFlag();
+				break;
+			case Action::MoveTowardsOwnFlag:
+				agent.MoveTowardsOwnFlag();
+				break;
+			case Action::Reload:
+				agent.Reload();
+				break;
+			case Action::Shoot:
+				agent.Shoot();
+				break;
+			}
+		}
 
 	protected:
+
 		virtual void onFrameStarted(veEvent event) {
+			for (Agent agent : redTeam) {
+				executeDT(agent);
+			}
+			for (Agent agent : blueTeam) {
+				executeDT(agent);
+			}
 		}
 
 	public:
-		///Constructor of class EventListenerGUI
-		EventListenerNPC(std::string name) : VEEventListener(name) { };
+		///Constructor of class EventListenerNPC
+		EventListenerNPC(std::string name) : VEEventListener(name) {
+			for (int i = 0; i < 5; i++) {
+				VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube" + std::to_string(i) + " Parent");
+				redTeam.push_back(createAgent(i, eParent));
+			}
+			for (int i = 5; i < 10; i++) {
+				VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube" + std::to_string(i) + " Parent");
+				blueTeam.push_back(createAgent(i, eParent));
+			}
+		};
 
-		///Destructor of class EventListenerGUI
+		///Destructor of class EventListenerNPC
 		virtual ~EventListenerNPC() {};
 	};
 
@@ -87,19 +344,15 @@ namespace ve {
 		std::vector<Node*> open_list;
 		std::vector<Node*> closed_list;
 		std::vector<Node*> route;
-		float cost_map[12][12] = {
-			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1, 0.1, 0.5, 1.0, 1.0},
-			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0, 1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
-			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
-			{1.0, 0.5, 0.5, 0.1, 0.1, 1.0, 1.0, 1.0, 0.5, 0.1, 0.1, 1.0},
-			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0, 0.5, 0.5, 0.1, 0.1, 1.0},
-			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0, 0.1, 0.1, 0.1, 0.1, 1.0},
-			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
-			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0, 0.5, 0.5, 0.1, 0.1, 1.0},
-			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0, 1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
-			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1, 0.1, 0.5, 1.0, 1.0},
-			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 1.0, 0.1, 0.5, 0.1, 0.1, 1.0},
-			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0, 0.5, 0.5, 0.1, 0.1, 1.0},
+		float cost_map[8][7] = {
+			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0},
+			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0, 1.0},
+			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 1.0},
+			{1.0, 0.5, 0.5, 0.1, 0.1, 1.0, 1.0},
+			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
+			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 1.0},
+			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0},
 		};
 		Node map[12][12] = {};
 		glm::ivec2 start;
@@ -169,7 +422,19 @@ namespace ve {
 
 	public:
 
-		std::vector<glm::ivec2> execude() {
+		std::vector<glm::ivec2> execude(glm::ivec2 start, glm::ivec2 end) {
+			this->start = start;
+			this->end = end;
+
+			//create starting node
+			Node* start_node = &map[start.x][start.y];
+			start_node->position = start;
+			start_node->cost_so_far = 0.0;
+			start_node->estimated_total_cost = 0.0;
+			start_node->heuristic = 0.0;
+			start_node->status = Open;
+			//Add starting point to open list
+			open_list.push_back(start_node);
 			glm::ivec2 n;
 			Node* lowest = &map[start.x][start.y];
 			while (lowest->position != end) {
@@ -209,22 +474,9 @@ namespace ve {
 		}
 
 		///Constructor of class EventListenerCollision
-		Pathfinder(glm::ivec2 start, glm::ivec2 end) {
+		Pathfinder() {
 			open_list = std::vector<Node*>();
 			closed_list = std::vector<Node*>();
-
-			this->start = start;
-			this->end = end;
-
-			//create starting node
-			Node* start_node = &map[start.x][start.y];
-			start_node->position = start;
-			start_node->cost_so_far = 0.0;
-			start_node->estimated_total_cost = 0.0;
-			start_node->heuristic = 0.0;
-			start_node->status = Open;
-			//Add starting point to open list
-			open_list.push_back(start_node);
 		};
 
 		///Destructor of class EventListenerCollision
@@ -538,7 +790,6 @@ namespace ve {
 		///The engine uses Y-UP, Left-handed
 		virtual void loadLevel(uint32_t numLevel = 1) {
 
-			VEEngine::loadLevel(numLevel);			//create standard cameras and lights
 
 			VESceneNode* pScene;
 			VECHECKPOINTER(pScene = getSceneManagerPointer()->createSceneNode("Level 1", getRoot()));
@@ -559,22 +810,26 @@ namespace ve {
 			pE4->setParam(glm::vec4(1000.0f, 1000.0f, 0.0f, 0.0f));
 
 			//Generate Red Team
+			//Cube 0-4
 			for (int i = 0; i < 5; i++) {
 				VESceneNode* e1, * e1Parent;
 				e1Parent = getSceneManagerPointer()->createSceneNode("The Cube" + std::to_string(i) + " Parent", pScene, glm::mat4(1.0));
 				VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube" + std::to_string(i), "media/models/test/crate_red", "cube.obj"));
-				e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f + i*2, 1.0f, 10.0f)));
+				e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(1.0f + i, 1.0f, 7.0f)));
 				e1Parent->addChild(e1);
 			}
 
 			//Generate Blue Team
+			//Cube 5-9
 			for (int i = 5; i < 10; i++) {
 				VESceneNode* e1, * e1Parent;
-				e1Parent = getSceneManagerPointer()->createSceneNode("The Cube" + std::to_string(i) + "  Parent", pScene, glm::mat4(1.0));
+				e1Parent = getSceneManagerPointer()->createSceneNode("The Cube" + std::to_string(i) + " Parent", pScene, glm::mat4(1.0));
 				VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube" + std::to_string(i), "media/models/test/crate_blue", "cube.obj"));
-				e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f + i*2 - 5*2, 1.0f, -10.0f)));
+				e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(1.0f + i - 5, 1.0f, 0.0f)));
 				e1Parent->addChild(e1);
 			}
+
+			VEEngine::loadLevel(numLevel);			//create standard cameras and lights
 
 			m_irrklangEngine->play2D("media/sounds/ophelia.wav", true);
 		};
@@ -590,6 +845,7 @@ int main() {
 	bool debug = true;
 
 	MyVulkanEngine mve(debug);	//enable or disable debugging (=callback, validation layers)
+
 
 	mve.initEngine();
 	mve.loadLevel(1);
