@@ -162,7 +162,7 @@ namespace ve {
 		///Constructor of class EventListenerCollision
 		EventListenerPathfinding(std::string name) : VEEventListener(name) {
 			open_list = std::vector<Node*>();
-		glm:ivec2 n;
+			glm::ivec2 n;
 			closed_list = std::vector<Node*>();
 
 			//create starting node
