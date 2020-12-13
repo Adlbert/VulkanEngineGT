@@ -531,7 +531,10 @@ namespace ve {
 				float distance = pathToEnemy.size();
 				if (distance < minDistance) {
 					minDistance = distance;
-					agent->nextPositionToMoveToEnemy = pathToEnemy[0];
+					if(pathToEnemy.size() > 1)
+						agent->nextPositionToMoveToEnemy = pathToEnemy[1];
+					else
+						agent->nextPositionToMoveToEnemy = pathToEnemy[0];
 				}
 				delete pf;
 			}
@@ -539,7 +542,10 @@ namespace ve {
 			Pathfinder* pf = new Pathfinder(agent->position, captureFlagPos);
 			std::vector<glm::ivec2> pathToFlag = pf->result;
 			agent->distToFlag = pathToFlag.size();
-			agent->nextPositionToMoveToFlag = pathToFlag[1];
+			if (pathToFlag.size() > 1)
+				agent->nextPositionToMoveToFlag = pathToFlag[1];
+			else
+				agent->nextPositionToMoveToFlag = pathToFlag[0];
 			delete pf;
 		}
 
@@ -557,9 +563,9 @@ namespace ve {
 				}
 			}
 			for (Agent* agent : blueTeam) {
-				prepareDecsion(agent, redTeam, glm::ivec2(7, 3));
+				prepareDecsion(agent, redTeam, glm::ivec2(3, 7));
 				executeDT(agent);
-				if (agent->position == glm::ivec2(7, 3)) {
+				if (agent->position == glm::ivec2(3, 7)) {
 					std::cout << "Blue Team Won" << std::endl;
 					g_gameLost = true;
 				}
