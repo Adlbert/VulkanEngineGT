@@ -591,12 +591,15 @@ namespace ve {
 
 	class EventListenerKeyboard : public VEEventListener {
 		glm::vec3 linearMomentum;
+		float pressed_force;
+		const float max_pressed_force = 5.0f;
+		glm::vec3 direction;
 		glm::vec3 force;
 		glm::vec3 angularMomentum;
 		float rotSpeed;
-		float mass = 1.0f;
-		float static_friction = 0.0f;
-		float dynamic_friction = 0.0f;
+		const float mass = 1.0f;
+		const float static_friction = 0.0f;
+		const float dynamic_friction = 0.0f;
 		glm::vec3 g = glm::vec3(0, -0.0981f, 0);
 		glm::vec3 angularVelocity;
 		glm::mat3 inertiaTensor;
@@ -678,7 +681,7 @@ namespace ve {
 		}
 
 		void applyGravity(veEvent event) {
-			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
+			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
 
 			//Assume Object is in the air if y is above y
 			if (eParent->getPosition().y > 1.0f) {
@@ -687,10 +690,10 @@ namespace ve {
 		}
 
 		void applyMovement(veEvent event, bool gravity) {
-			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
+			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
 
 			if (gravity) {
-				if (eParent->getPosition().y > 1.0f) {
+				if (eParent->getPosition().y > 0.6f) {
 					linearMomentum += (float)event.dt * mass * (g + force);
 				}
 			}
@@ -703,8 +706,8 @@ namespace ve {
 
 		void applyRotation(veEvent event) {
 
-			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Cube0 Parent");
-			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Cube0");
+			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
+			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Ball");
 
 			glm::vec3 position = eParent->getPosition(); //in Local Space
 
@@ -731,8 +734,8 @@ namespace ve {
 		}
 
 		void checkCollision() {
-			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getTransform()[3];
-			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->getWorldRotation();
+			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getTransform()[3];
+			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getWorldRotation();
 			glm::vec3 positionPlane = glm::vec3(getSceneManagerPointer()->getSceneNode("The Plane")->getPosition());
 
 			//lm::mat3(getSceneManagerPointer()->getSceneNode("The Cube0")->getRotation())
@@ -817,27 +820,26 @@ namespace ve {
 
 	protected:
 		virtual void onFrameStarted(veEvent event) {
-			checkCollision();
-			applyRotation(event);
+			//checkCollision();
+			//applyRotation(event);
 			applyMovement(event, gravity);
 			dampenForce(0.002f, force);
 			dampenForce(0.002f, linearMomentum);
 		};
 
 		virtual bool onKeyboard(veEvent event) {
-			if (event.idata3 == GLFW_RELEASE) return false;
-
-			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
+			if (event.idata3 == GLFW_RELEASE) {
 				if (cube_spawned) {
-					force += glm::vec3(0.0f, 0.0f, 0.0f);
+					VECamera* c = getSceneManagerPointer()->getCamera();
+					direction = getSceneManagerPointer()->getCamera()->getWorldTransform()[2];
+					force += pressed_force * direction;
 					gravity = true;
 					rotSpeed = 1.5f;
 					rotSpeed = (float)d(e) / 10;
 				}
 				else {
 					gravity = false;
-					getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->setPosition(glm::vec3(-5.0f, 5.0f, 10.0f));
-					//getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->setTransform(glm::mat4(1.0f));
+					getSceneManagerPointer()->getSceneNode("The Ball Parent")->setPosition(glm::vec3(0.0f, 0.7f, 7.0f));
 					linearMomentum = glm::vec3(0.0f);
 					angularMomentum = glm::vec4(0.0f);
 					angularVelocity = glm::vec3(0.0f);;
@@ -845,7 +847,16 @@ namespace ve {
 					rotSpeed = 0;
 				}
 				cube_spawned = !cube_spawned;
+				std::cout << pressed_force << std::endl;
+				pressed_force = 0;
 				return true;
+			}
+
+			if (event.idata1 == GLFW_KEY_SPACE && (event.idata3 == GLFW_PRESS || event.idata3 == GLFW_REPEAT)) {
+				pressed_force += event.dt;
+				if (pressed_force > max_pressed_force)
+					pressed_force = max_pressed_force;
+				std::cout << pressed_force << std::endl;
 			}
 			return false;
 		}
@@ -853,6 +864,7 @@ namespace ve {
 	public:
 		///Constructor of class EventListenerCollision
 		EventListenerKeyboard(std::string name) : VEEventListener(name) {
+			pressed_force = 0;
 			linearMomentum = glm::vec3();
 			angularMomentum = glm::vec4();
 			angularVelocity = glm::vec3();;
@@ -882,7 +894,7 @@ namespace ve {
 		virtual void registerEventListeners() {
 			VEEngine::registerEventListeners();
 
-			//registerEventListener(new EventListenerNPC("NPC"), { veEvent::VE_EVENT_FRAME_STARTED });
+			registerEventListener(new EventListenerKeyboard("Ball"), { veEvent::VE_EVENT_FRAME_STARTED, veEvent::VE_EVENT_KEYBOARD });
 		};
 
 
