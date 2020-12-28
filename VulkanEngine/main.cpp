@@ -531,7 +531,7 @@ namespace ve {
 				float distance = pathToEnemy.size();
 				if (distance < minDistance) {
 					minDistance = distance;
-					if(pathToEnemy.size() > 1)
+					if (pathToEnemy.size() > 1)
 						agent->nextPositionToMoveToEnemy = pathToEnemy[1];
 					else
 						agent->nextPositionToMoveToEnemy = pathToEnemy[0];
@@ -882,7 +882,7 @@ namespace ve {
 		virtual void registerEventListeners() {
 			VEEngine::registerEventListeners();
 
-			registerEventListener(new EventListenerNPC("NPC"), { veEvent::VE_EVENT_FRAME_STARTED });
+			//registerEventListener(new EventListenerNPC("NPC"), { veEvent::VE_EVENT_FRAME_STARTED });
 		};
 
 
@@ -909,25 +909,42 @@ namespace ve {
 			VECHECKPOINTER(pE4 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Plane/plane_t_n_s.obj/plane/Entity_0"));
 			pE4->setParam(glm::vec4(1000.0f, 1000.0f, 0.0f, 0.0f));
 
-			//Generate Red Team
-			//Cube 0-4
-			for (int i = 0; i < 5; i++) {
-				VESceneNode* e1, * e1Parent;
-				e1Parent = getSceneManagerPointer()->createSceneNode("The Cube" + std::to_string(i) + " Parent", pScene, glm::mat4(1.0));
-				VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube" + std::to_string(i), "media/models/test/crate_red", "cube.obj"));
-				e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(1.0f + i, 1.0f, 7.0f)));
-				e1Parent->addChild(e1);
-			}
+			VESceneNode* b1, * b1Parent;
+			b1Parent = getSceneManagerPointer()->createSceneNode("The Ball Parent", pScene, glm::mat4(1.0));
+			VECHECKPOINTER(b1 = getSceneManagerPointer()->loadModel("The Ball", "media/models/game/", "ball.obj"));
+			b1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.2f, 0.2f)));
+			b1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.7f, 7.0f)));
+			b1Parent->addChild(b1);
 
-			//Generate Blue Team
-			//Cube 5-9
-			for (int i = 5; i < 10; i++) {
-				VESceneNode* e1, * e1Parent;
-				e1Parent = getSceneManagerPointer()->createSceneNode("The Cube" + std::to_string(i) + " Parent", pScene, glm::mat4(1.0));
-				VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube" + std::to_string(i), "media/models/test/crate_blue", "cube.obj"));
-				e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(1.0f + i - 5, 1.0f, 0.0f)));
-				e1Parent->addChild(e1);
-			}
+			VESceneNode* g1, * g1Parent;
+			g1Parent = getSceneManagerPointer()->createSceneNode("The Goal Parent", pScene, glm::mat4(1.0));
+			VECHECKPOINTER(g1 = getSceneManagerPointer()->loadModel("The Goal", "media/models/game/", "goal.obj"));
+			g1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.01f, 0.01f, 0.01f)));
+			//goal seems to be 5 width
+			g1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-2.5f, 0.55f, 25.0f)));
+			g1Parent->addChild(g1);
+
+
+
+			////Generate Red Team
+			////Cube 0-4
+			//for (int i = 0; i < 5; i++) {
+			//	VESceneNode* e1, * e1Parent;
+			//	e1Parent = getSceneManagerPointer()->createSceneNode("The Cube" + std::to_string(i) + " Parent", pScene, glm::mat4(1.0));
+			//	VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube" + std::to_string(i), "media/models/test/crate_red", "cube.obj"));
+			//	e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(1.0f + i, 1.0f, 7.0f)));
+			//	e1Parent->addChild(e1);
+			//}
+
+			////Generate Blue Team
+			////Cube 5-9
+			//for (int i = 5; i < 10; i++) {
+			//	VESceneNode* e1, * e1Parent;
+			//	e1Parent = getSceneManagerPointer()->createSceneNode("The Cube" + std::to_string(i) + " Parent", pScene, glm::mat4(1.0));
+			//	VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube" + std::to_string(i), "media/models/test/crate_blue", "cube.obj"));
+			//	e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(1.0f + i - 5, 1.0f, 0.0f)));
+			//	e1Parent->addChild(e1);
+			//}
 
 			VEEngine::loadLevel(numLevel);			//create standard cameras and lights
 
