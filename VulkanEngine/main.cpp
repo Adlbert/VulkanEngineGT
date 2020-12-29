@@ -19,13 +19,17 @@ namespace ve {
 	bool g_gameLost = false;			//true... das Spiel wurde verloren
 	bool g_restart = false;			//true...das Spiel soll neu gestartet werden
 	glm::vec2 rotation_pos;
+	float pressed_force;
 
 	static std::default_random_engine e{ 12345 };					//F�r Zufallszahlen
 	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//F�r Zufallszahlen
 
 	class EventListenerGUI : public VEEventListener {
 	private:
-		struct nk_vec2 rot_pos;
+		const struct nk_vec2 ball_position = nk_vec2(20, 140);
+		const float ball_height = 100;
+		const float ball_width = 100;
+		struct nk_vec2 rot_pos = nk_vec2(20 + ball_width / 2, 140 + ball_height / 2);
 
 	protected:
 
@@ -49,15 +53,20 @@ namespace ve {
 					sprintf(outbuffer, "Time: %004.1lf", g_time);
 					nk_label(ctx, outbuffer, NK_TEXT_LEFT);
 
-					struct nk_rect ball = nk_rect(20, 150, 100, 100);
+					struct nk_rect ball = nk_rect(ball_position.x, ball_position.y, ball_height, ball_width);
 					nk_fill_circle(canvas, ball, nk_rgb(255, 255, 255));
 					if (nk_input_any_mouse_click_in_rect(&ctx->input, ball)) {
 						rot_pos = *(&ctx->input.mouse.pos);
 					}
-					rotation_pos = glm::vec2(rot_pos.x, rot_pos.y);
+					rotation_pos = glm::vec2(rot_pos.x - ball_position.x - ball_width / 2, rot_pos.y - ball_position.y - ball_height / 2);
+					rotation_pos /= 50;
 
 					struct nk_rect circle = nk_rect(rot_pos.x, rot_pos.y, 15, 15);
-					nk_stroke_circle(canvas, circle, 20.0f, nk_rgb(255, 0, 0));
+					nk_fill_circle(canvas, circle, nk_rgb(255, 0, 0));
+
+					nk_fill_rect(canvas, nk_rect(150, 140, 20, 100), 0, nk_rgb(255, 0, 0));
+					float height = pressed_force * 20;
+					nk_fill_rect(canvas, nk_rect(150, 140, 20, height), 0, nk_rgb(0, 255, 0));
 				}
 			}
 			else {
@@ -77,7 +86,6 @@ namespace ve {
 	public:
 		///Constructor of class EventListenerGUI
 		EventListenerGUI(std::string name) : VEEventListener(name) {
-			rot_pos = nk_vec2(50, 230);
 		};
 
 		///Destructor of class EventListenerGUI
@@ -364,7 +372,6 @@ namespace ve {
 			n = end;
 			std::vector<glm::ivec2> result;
 			while (n != start) {
-				std::cout << glm::to_string(n + 1) << std::endl;
 				n = map[n.x][n.y].connection.from;
 				result.push_back(n);
 			}
@@ -650,7 +657,6 @@ namespace ve {
 
 	class EventListenerKeyboard : public VEEventListener {
 		glm::vec3 linearMomentum;
-		float pressed_force;
 		const float max_pressed_force = 5.0f;
 		glm::vec3 direction;
 		glm::vec3 force;
@@ -664,6 +670,7 @@ namespace ve {
 		glm::mat3 inertiaTensor;
 		bool gravity = false;
 		bool cube_spawned = true;
+		bool apply = true;
 
 	private:
 		//m .. mass
@@ -764,6 +771,9 @@ namespace ve {
 		}
 
 		void applyRotation(veEvent event) {
+			rotSpeed = glm::distance(rotation_pos, glm::vec2(0, 0));
+			if (rotSpeed <= 0)
+				return;
 
 			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
 			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Ball");
@@ -784,7 +794,8 @@ namespace ve {
 
 			glm::vec4 rot4 = glm::vec4(1.0);
 			float angle = rotSpeed * (float)event.dt;
-			rot4 = e1->getTransform() * glm::vec4(0.0, 0.1, 0.0, 1.0);
+			glm::vec2 rot_axis = glm::normalize(rotation_pos) * -1;
+			rot4 = e1->getTransform() * glm::vec4(rot_axis.x, rot_axis.y, 0.0, 1.0);
 			glm::vec3  rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
 
 			rot3 = rot3 + float(event.dt) * glm::matrixCross3(angularVelocity) * rot3;
@@ -880,10 +891,12 @@ namespace ve {
 	protected:
 		virtual void onFrameStarted(veEvent event) {
 			//checkCollision();
-			//applyRotation(event);
-			applyMovement(event, gravity);
-			dampenForce(0.002f, force);
-			dampenForce(0.002f, linearMomentum);
+			applyRotation(event);
+			if (apply) {
+				applyMovement(event, gravity);
+				dampenForce(0.002f, force);
+				dampenForce(0.002f, linearMomentum);
+			}
 		};
 
 		virtual bool onKeyboard(veEvent event) {
@@ -893,8 +906,10 @@ namespace ve {
 					direction = getSceneManagerPointer()->getCamera()->getWorldTransform()[2];
 					force += pressed_force * direction;
 					gravity = true;
-					rotSpeed = 1.5f;
-					rotSpeed = (float)d(e) / 10;
+					//rotSpeed = 1.5f;
+					//rotSpeed = (float)d(e) / 10;
+					//rotSpeed = 0.0f;
+					apply = true;
 				}
 				else {
 					gravity = false;
@@ -904,9 +919,9 @@ namespace ve {
 					angularVelocity = glm::vec3(0.0f);;
 					force = glm::vec3(0.0f);
 					rotSpeed = 0;
+					apply = false;
 				}
 				cube_spawned = !cube_spawned;
-				std::cout << pressed_force << std::endl;
 				pressed_force = 0;
 				return true;
 			}
@@ -915,7 +930,6 @@ namespace ve {
 				pressed_force += event.dt;
 				if (pressed_force > max_pressed_force)
 					pressed_force = max_pressed_force;
-				std::cout << pressed_force << std::endl;
 			}
 			return false;
 		}
@@ -933,6 +947,7 @@ namespace ve {
 				-1.0f, -1.0f, 1.0f, 0.0f); //assume interia tensor is 1
 			force = glm::vec3();
 			rotSpeed = 0;
+			apply = false;
 		};
 
 		///Destructor of class EventListenerCollision
