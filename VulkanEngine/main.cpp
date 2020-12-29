@@ -663,8 +663,9 @@ namespace ve {
 		glm::vec3 angularMomentum;
 		float rotSpeed;
 		const float mass = 1.0f;
-		const float static_friction = 0.0f;
-		const float dynamic_friction = 0.0f;
+		const float static_friction = 0.0005f;
+		const float dynamic_friction_air = 0.0000000000001f;
+		const float dynamic_friction_grass = 0.000000001f;
 		glm::vec3 g = glm::vec3(0, -0.0981f, 0);
 		glm::vec3 angularVelocity;
 		glm::mat3 inertiaTensor;
@@ -717,7 +718,9 @@ namespace ve {
 			glm::vec3 prel = get_prel(lvA, lvB, aVA, aVB, rA, rB);
 			float d = get_d(n, prel);
 			glm::mat4 K = get_K(mA, mB, rA, rB, itA, itB);
-			glm::vec3 t = get_tangetial_velocity(lvA, lvB, aVA, aVB, rA, rB, n);
+			glm::vec3 t = glm::vec3(1, 1, 1);
+			if (glm::length(aVA) != 0 && glm::length(aVB) != 0)
+				t = get_tangetial_velocity(lvA, lvB, aVA, aVB, rA, rB, n);
 			glm::vec3 f = get_mag_imp_dirN(e, d, n, K, dF, t);
 			return f * n - dF * f * t;
 		}
@@ -740,9 +743,16 @@ namespace ve {
 		}
 
 		void applyFriction() {
+			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
+
 			linearMomentum -= getFF(static_friction);
 			if (glm::length(linearMomentum) > 0) {
-				linearMomentum -= getFF(dynamic_friction);
+				if (eParent->getPosition().y > 1.1f) {
+					linearMomentum -= getFF(dynamic_friction_air);
+				}
+				else {
+					linearMomentum -= getFF(dynamic_friction_grass);
+				}
 			}
 		}
 
@@ -750,7 +760,7 @@ namespace ve {
 			VESceneNode* eParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
 
 			//Assume Object is in the air if y is above y
-			if (eParent->getPosition().y > 1.0f) {
+			if (eParent->getPosition().y > 1.1f) {
 				linearMomentum += (float)event.dt * mass * g;
 			}
 		}
@@ -810,6 +820,7 @@ namespace ve {
 
 			//lm::mat3(getSceneManagerPointer()->getSceneNode("The Cube0")->getRotation())
 			vpe::Box cube0{ positionCube0, rotationCube0 };
+			//vpe::Sphere cube0{ positionCube0, 0.2f };
 			//assume that the center of the plane is directly under the cube
 			positionPlane = positionCube0;
 			positionPlane.y = 0;
@@ -817,71 +828,41 @@ namespace ve {
 
 
 			vec3 mtv(0, 1, 0); //minimum translation vector
-			mtv = glm::normalize(force + (g * -1));
 
 			bool hit = vpe::collision(cube0, plane, mtv);
 
-
 			if (hit) {
-				std::set<vpe::contact> ct;
-				vec3 mtv(0, 1, 0); //minimum translation vector
-				mtv = glm::normalize(force + (g * -1));
+				std::cout << "hit" << std::endl;
+				//mtv = glm::normalize(force + (g * -1));
+				////resolv interpenetration
+				////works better without resolving
+				////Maybe this is resolved somewhere else 
+				getSceneManagerPointer()->getSceneNode("The Ball Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
 
-
-				vpe::contacts(cube0, plane, mtv, ct);
-
-				//resolv interpenetration
-				//works better without resolving
-				//Maybe this is resolved somewhere else 
-				//getSceneManagerPointer()->getSceneNode("The Cube0 Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), mtv));
-
-				float e = 0.1f;
+				float e = 0.5f;
 				float dF = 0.2;
-				//assume postion as center
-				glm::vec3 cA = positionCube0;
+				////assume postion as center
 				glm::vec3 f_ = glm::vec3(0.0f);
-				glm::vec3 rA = glm::vec3(0.0f);
-				glm::vec3 rB = glm::vec3(0.0f);
-				std::set<vpe::contact>::iterator itr;
-				for (itr = ct.begin(); itr != ct.end(); itr++) {
-					//Vectors in World Space
-					//some how the vectors make more sense if converting them from World to Local Space
-					glm::vec3 p = itr->obj2->posW2L(itr->pos);
-					glm::vec3 rA_ = p - itr->obj2->pos();
+				glm::vec3 rA_ = cube0.pos();
 
-					p = itr->obj1->posW2L(itr->pos);
-					glm::vec3 rB_ = p - itr->obj1->pos();
+				glm::vec3 rB_ = glm::vec3(cube0.pos().x, 0, cube0.pos().z);
 
-					//rA_ = itr->obj2->posL2W(rA_);;
-					//rB_ = itr->obj1->posL2W(rB_);;
-
-					glm::vec3 lvA = force + g;
-					glm::vec3 lvB = glm::vec3();
-					glm::vec3 aVB = glm::vec3();
-					glm::vec3 prel = get_prel(lvA, lvB, angularVelocity, aVB, rA_, rB_);
-					glm::vec3 n = itr->normal;
-					float d = get_d(n, prel);
-					if (d < 0) {
-						glm::vec3 f_part = fHat(lvA, lvB, angularVelocity, aVB, mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, e, n, dF);
-						rA += rA_;
-						rB += rB_;
-						f_ += f_part;
-					}
-					if (d == 0) {
-						glm::vec3 f_part = fHat(lvA, lvB, angularVelocity, aVB, mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, 0.0f, n, dF);
-						rA += rA_;
-						rB += rB_;
-						f_ += f_part;
-					}
+				//glm::vec3 lvA = force + g;
+				glm::vec3 lvB = glm::vec3();
+				glm::vec3 aVB = glm::vec3();
+				glm::vec3 prel = get_prel(linearMomentum, lvB, angularVelocity, aVB, rA_, rB_);
+				glm::vec3 n = glm::normalize(glm::vec3(0, 1, 0));
+				float d = get_d(n, prel);
+				if (d == 0) {
+					f_ = fHat(linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, 0.0f, n, dF);
 				}
-
-
-				f_ /= ct.size();
-				rA /= ct.size();
-				rB /= ct.size();
-				force = f_;
-				linearMomentum = f_;
-				angularMomentum = glm::cross(rA, f_);
+				if (d > 0) {
+					f_ = fHat(linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, e, n, dF);
+				}
+				//force += f_;
+				std::cout << glm::to_string(force) << std::endl;
+				//linearMomentum = f_;
+				//angularMomentum = glm::cross(rA_, f_);
 
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
@@ -890,12 +871,12 @@ namespace ve {
 
 	protected:
 		virtual void onFrameStarted(veEvent event) {
-			//checkCollision();
-			applyRotation(event);
+			checkCollision();
 			if (apply) {
+				applyRotation(event);
 				applyMovement(event, gravity);
-				dampenForce(0.002f, force);
-				dampenForce(0.002f, linearMomentum);
+				dampenForce(0.1f, force);
+				//dampenForce(0.002f, linearMomentum);
 			}
 		};
 
@@ -904,6 +885,7 @@ namespace ve {
 				if (cube_spawned) {
 					VECamera* c = getSceneManagerPointer()->getCamera();
 					direction = getSceneManagerPointer()->getCamera()->getWorldTransform()[2];
+					direction = glm::vec3(0, 1, 0);
 					force += pressed_force * direction;
 					gravity = true;
 					//rotSpeed = 1.5f;
@@ -913,10 +895,10 @@ namespace ve {
 				}
 				else {
 					gravity = false;
-					getSceneManagerPointer()->getSceneNode("The Ball Parent")->setPosition(glm::vec3(0.0f, 0.7f, 7.0f));
+					getSceneManagerPointer()->getSceneNode("The Ball Parent")->setPosition(glm::vec3(0.0f, 1.1f, 21.0f));
 					linearMomentum = glm::vec3(0.0f);
 					angularMomentum = glm::vec4(0.0f);
-					angularVelocity = glm::vec3(0.0f);;
+					angularVelocity = glm::vec3(0.0f);
 					force = glm::vec3(0.0f);
 					rotSpeed = 0;
 					apply = false;
@@ -927,7 +909,7 @@ namespace ve {
 			}
 
 			if (event.idata1 == GLFW_KEY_SPACE && (event.idata3 == GLFW_PRESS || event.idata3 == GLFW_REPEAT)) {
-				pressed_force += event.dt;
+				pressed_force += event.dt * 10;
 				if (pressed_force > max_pressed_force)
 					pressed_force = max_pressed_force;
 			}
@@ -999,16 +981,16 @@ namespace ve {
 			VESceneNode* b1, * b1Parent;
 			b1Parent = getSceneManagerPointer()->createSceneNode("The Ball Parent", pScene, glm::mat4(1.0));
 			VECHECKPOINTER(b1 = getSceneManagerPointer()->loadModel("The Ball", "media/models/game/", "ball.obj"));
-			b1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.2f, 0.2f)));
-			b1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.7f, 7.0f)));
+			b1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.6f, 0.6f, 0.6f)));
+			b1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.1f, 21.0f)));
 			b1Parent->addChild(b1);
 
 			VESceneNode* g1, * g1Parent;
 			g1Parent = getSceneManagerPointer()->createSceneNode("The Goal Parent", pScene, glm::mat4(1.0));
 			VECHECKPOINTER(g1 = getSceneManagerPointer()->loadModel("The Goal", "media/models/game/", "goal.obj"));
-			g1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.01f, 0.01f, 0.01f)));
-			//goal seems to be 5 width
-			g1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-2.5f, 0.55f, 25.0f)));
+			g1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.03f, 0.03f, 0.03f)));
+			//goal seems to be 15 width
+			g1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-7.5f, 0.55f, 75.0f)));
 			g1Parent->addChild(g1);
 
 
