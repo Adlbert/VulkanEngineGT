@@ -18,9 +18,71 @@ namespace ve {
 	double g_time = 30.0;				//zeit die noch �brig ist
 	bool g_gameLost = false;			//true... das Spiel wurde verloren
 	bool g_restart = false;			//true...das Spiel soll neu gestartet werden
+	glm::vec2 rotation_pos;
 
 	static std::default_random_engine e{ 12345 };					//F�r Zufallszahlen
 	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//F�r Zufallszahlen
+
+	class EventListenerGUI : public VEEventListener {
+	private:
+		struct nk_vec2 rot_pos;
+
+	protected:
+
+		virtual void onDrawOverlay(veEvent event) {
+			VESubrenderFW_Nuklear* pSubrender = (VESubrenderFW_Nuklear*)getRendererPointer()->getOverlay();
+			if (pSubrender == nullptr) return;
+
+			struct nk_context* ctx = pSubrender->getContext();
+			struct nk_command_buffer* canvas;
+
+			if (!g_gameLost) {
+				if (nk_begin(ctx, "", nk_rect(0, 0, 200, 270), NK_WINDOW_BORDER)) {
+					canvas = nk_window_get_canvas(ctx);
+					char outbuffer[100];
+
+					nk_layout_row_dynamic(ctx, 45, 1);
+					sprintf(outbuffer, "Score: %03d", g_score);
+					nk_label(ctx, outbuffer, NK_TEXT_LEFT);
+
+					nk_layout_row_dynamic(ctx, 45, 1);
+					sprintf(outbuffer, "Time: %004.1lf", g_time);
+					nk_label(ctx, outbuffer, NK_TEXT_LEFT);
+
+					struct nk_rect ball = nk_rect(20, 150, 100, 100);
+					nk_fill_circle(canvas, ball, nk_rgb(255, 255, 255));
+					if (nk_input_any_mouse_click_in_rect(&ctx->input, ball)) {
+						rot_pos = *(&ctx->input.mouse.pos);
+					}
+					rotation_pos = glm::vec2(rot_pos.x, rot_pos.y);
+
+					struct nk_rect circle = nk_rect(rot_pos.x, rot_pos.y, 15, 15);
+					nk_stroke_circle(canvas, circle, 20.0f, nk_rgb(255, 0, 0));
+				}
+			}
+			else {
+				if (nk_begin(ctx, "", nk_rect(500, 500, 200, 170), NK_WINDOW_BORDER)) {
+					nk_layout_row_dynamic(ctx, 45, 1);
+					nk_label(ctx, "Game Over", NK_TEXT_LEFT);
+					if (nk_button_label(ctx, "Restart")) {
+						g_restart = true;
+					}
+				}
+
+			};
+
+			nk_end(ctx);
+		}
+
+	public:
+		///Constructor of class EventListenerGUI
+		EventListenerGUI(std::string name) : VEEventListener(name) {
+			rot_pos = nk_vec2(50, 230);
+		};
+
+		///Destructor of class EventListenerGUI
+		virtual ~EventListenerGUI() {};
+	};
 
 	//Implemented MoveTowardsEnemyFlag and MoveTowardsOwnFlag
 	enum class Action {
@@ -464,9 +526,6 @@ namespace ve {
 		}
 	};
 
-
-
-
 	//
 	//Perform Actions for NPCS
 	//
@@ -895,6 +954,7 @@ namespace ve {
 			VEEngine::registerEventListeners();
 
 			registerEventListener(new EventListenerKeyboard("Ball"), { veEvent::VE_EVENT_FRAME_STARTED, veEvent::VE_EVENT_KEYBOARD });
+			registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY });
 		};
 
 
