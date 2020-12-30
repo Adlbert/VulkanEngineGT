@@ -29,7 +29,8 @@ namespace ve {
 		const struct nk_vec2 ball_position = nk_vec2(20, 140);
 		const float ball_height = 100;
 		const float ball_width = 100;
-		struct nk_vec2 rot_pos = nk_vec2(20 + ball_width / 2, 140 + ball_height / 2);
+		//Let it be a little off
+		struct nk_vec2 rot_pos = nk_vec2(19 + ball_width / 2, 139 + ball_height / 2);
 
 	protected:
 
@@ -717,9 +718,13 @@ namespace ve {
 		glm::vec3 fHat(glm::vec3 lvA, glm::vec3 lvB, glm::vec3 aVA, glm::vec3 aVB, float mA, float mB, glm::vec3 rA, glm::vec3 rB, glm::mat3 itA, glm::mat3 itB, float e, glm::vec3 n, float dF) {
 			glm::vec3 prel = get_prel(lvA, lvB, aVA, aVB, rA, rB);
 			float d = get_d(n, prel);
+			return fHat(d, linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
+		}
+
+		glm::vec3 fHat(float d, glm::vec3 lvA, glm::vec3 lvB, glm::vec3 aVA, glm::vec3 aVB, float mA, float mB, glm::vec3 rA, glm::vec3 rB, glm::mat3 itA, glm::mat3 itB, float e, glm::vec3 n, float dF) {
 			glm::mat4 K = get_K(mA, mB, rA, rB, itA, itB);
 			glm::vec3 t = glm::vec3(1, 1, 1);
-			if (glm::length(aVA) != 0 && glm::length(aVB) != 0)
+			if (glm::length(aVA) != 0 || glm::length(aVB) != 0)
 				t = get_tangetial_velocity(lvA, lvB, aVA, aVB, rA, rB, n);
 			glm::vec3 f = get_mag_imp_dirN(e, d, n, K, dF, t);
 			return f * n - dF * f * t;
@@ -815,7 +820,7 @@ namespace ve {
 
 		void checkCollision() {
 			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getTransform()[3];
-			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getWorldRotation();
+			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getTransform();
 			glm::vec3 positionPlane = glm::vec3(getSceneManagerPointer()->getSceneNode("The Plane")->getPosition());
 
 			//lm::mat3(getSceneManagerPointer()->getSceneNode("The Cube0")->getRotation())
@@ -832,48 +837,61 @@ namespace ve {
 			bool hit = vpe::collision(cube0, plane, mtv);
 
 			if (hit) {
-				std::cout << "hit" << std::endl;
-				//mtv = glm::normalize(force + (g * -1));
-				////resolv interpenetration
-				////works better without resolving
-				////Maybe this is resolved somewhere else 
+				std::set<vpe::contact> contacts;
+				vpe::contacts(cube0, plane, mtv, contacts);
+				std::set<vpe::contact>::iterator itr;
+				glm::vec3 f = glm::vec3(0.0f);
 				getSceneManagerPointer()->getSceneNode("The Ball Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
+				float e = 0.01f;
+				float dF = 0.4;
+				int used_contacts = 0;
 
-				float e = 0.5f;
-				float dF = 0.2;
-				////assume postion as center
-				glm::vec3 f_ = glm::vec3(0.0f);
-				glm::vec3 rA_ = cube0.pos();
+				std::cout << "hit_ " << contacts.size() << std::endl;
+				std::cout << "force" << glm::to_string(force) << std::endl;
+				std::cout << "linearMomentum" << glm::to_string(linearMomentum) << std::endl;
+				std::cout << "angularMomentum" << glm::to_string(angularMomentum) << std::endl;
+				std::cout << "::::::::::::::::::" << std::endl;
 
-				glm::vec3 rB_ = glm::vec3(cube0.pos().x, 0, cube0.pos().z);
+				for (itr = contacts.begin(); itr != contacts.end(); itr++) {
+					////assume postion as center
+					glm::vec3 rA = itr->obj1->posW2L(itr->obj2->pos()) - itr->obj2->posW2L(itr->pos);
+					glm::vec3 rB = itr->obj2->posW2L(itr->obj1->pos()) - itr->obj1->posW2L(itr->pos);
 
-				//glm::vec3 lvA = force + g;
-				glm::vec3 lvB = glm::vec3();
-				glm::vec3 aVB = glm::vec3();
-				glm::vec3 prel = get_prel(linearMomentum, lvB, angularVelocity, aVB, rA_, rB_);
-				glm::vec3 n = glm::normalize(glm::vec3(0, 1, 0));
-				float d = get_d(n, prel);
-				if (d == 0) {
-					f_ = fHat(linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, 0.0f, n, dF);
+					glm::vec3 lvB = glm::vec3(.1, .1, .1);
+					glm::vec3 aVB = glm::vec3(.1, .1, .1);
+					glm::vec3 prel = get_prel(linearMomentum, lvB, angularVelocity, aVB, rA, rB);
+					glm::vec3 n = glm::normalize(glm::vec3(0, -1, 0));
+					float d = get_d(n, prel);
+					if (d == 0) {
+						f += fHat(d, linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
+						used_contacts++;
+					}
+					if (d > 0) {
+						glm::vec3 tf = fHat(d, linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
+						if (tf.y == tf.y) {
+							f += tf;
+							used_contacts++;
+						}
+						else {
+							std::cout << "NAN" << std::endl;
+						}
+					}
 				}
-				if (d > 0) {
-					f_ = fHat(linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA_, rB_, inertiaTensor, inertiaTensor, e, n, dF);
-				}
-				//force += f_;
-				std::cout << glm::to_string(force) << std::endl;
-				//linearMomentum = f_;
-				//angularMomentum = glm::cross(rA_, f_);
 
-				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
-				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/gameover.wav", false);
+				if (used_contacts > 0)
+					f /= used_contacts;
+				force = f;
+				std::cout << "angularVelocity" << glm::to_string(angularVelocity) << std::endl;
+				std::cout << "force" << glm::to_string(force) << std::endl;
+				std::cout << "__________________" << std::endl;
 			}
 		}
 
 	protected:
 		virtual void onFrameStarted(veEvent event) {
 			checkCollision();
+			applyRotation(event);
 			if (apply) {
-				applyRotation(event);
 				applyMovement(event, gravity);
 				dampenForce(0.1f, force);
 				//dampenForce(0.002f, linearMomentum);
