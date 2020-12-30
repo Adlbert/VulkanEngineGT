@@ -673,6 +673,7 @@ namespace ve {
 		bool gravity = false;
 		bool cube_spawned = true;
 		bool apply = true;
+		int contact_count = 0;
 
 	private:
 		//m .. mass
@@ -819,6 +820,10 @@ namespace ve {
 		}
 
 		void checkCollision() {
+			if (contact_count > 4) {
+				contact_count = 0;
+				respawn();
+			}
 			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getTransform()[3];
 			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getTransform();
 			glm::vec3 positionPlane = glm::vec3(getSceneManagerPointer()->getSceneNode("The Plane")->getPosition());
@@ -837,13 +842,14 @@ namespace ve {
 			bool hit = vpe::collision(cube0, plane, mtv);
 
 			if (hit) {
+				respawn();
 				std::set<vpe::contact> contacts;
 				vpe::contacts(cube0, plane, mtv, contacts);
 				std::set<vpe::contact>::iterator itr;
 				glm::vec3 f = glm::vec3(0.0f);
 				getSceneManagerPointer()->getSceneNode("The Ball Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
-				float e = 0.01f;
-				float dF = 0.4;
+				float e = 0.4f;
+				float dF = 0.2;
 				int used_contacts = 0;
 
 				std::cout << "hit_ " << contacts.size() << std::endl;
@@ -859,15 +865,15 @@ namespace ve {
 
 					glm::vec3 lvB = glm::vec3(.1, .1, .1);
 					glm::vec3 aVB = glm::vec3(.1, .1, .1);
-					glm::vec3 prel = get_prel(linearMomentum, lvB, angularVelocity, aVB, rA, rB);
-					glm::vec3 n = glm::normalize(glm::vec3(0, -1, 0));
+					glm::vec3 prel = get_prel(linearMomentum, lvB, angularMomentum, aVB, rA, rB);
+					glm::vec3 n = glm::normalize(glm::vec3(0, 1, 0));
 					float d = get_d(n, prel);
 					if (d == 0) {
-						f += fHat(d, linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
+						f += fHat(d, linearMomentum, lvB, angularMomentum, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
 						used_contacts++;
 					}
-					if (d > 0) {
-						glm::vec3 tf = fHat(d, linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
+					if (d < 0) {
+						glm::vec3 tf = fHat(d, linearMomentum, lvB, angularMomentum, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
 						if (tf.y == tf.y) {
 							f += tf;
 							used_contacts++;
@@ -881,10 +887,24 @@ namespace ve {
 				if (used_contacts > 0)
 					f /= used_contacts;
 				force = f;
-				std::cout << "angularVelocity" << glm::to_string(angularVelocity) << std::endl;
+				contact_count++;
+				//linearMomentum = glm::vec3(0, 0, 0);
+				//angularMomentum = glm::vec3(0, 0, 0);
+				std::cout << "angularVelocity" << glm::to_string(angularMomentum) << std::endl;
 				std::cout << "force" << glm::to_string(force) << std::endl;
 				std::cout << "__________________" << std::endl;
 			}
+		}
+
+		void respawn() {
+			gravity = false;
+			getSceneManagerPointer()->getSceneNode("The Ball Parent")->setPosition(glm::vec3(0.0f, 1.1f, 21.0f));
+			linearMomentum = glm::vec3(0.0f);
+			angularMomentum = glm::vec4(0.0f);
+			angularVelocity = glm::vec3(0.0f);
+			force = glm::vec3(0.0f);
+			rotSpeed = 0;
+			apply = false;
 		}
 
 	protected:
@@ -912,14 +932,7 @@ namespace ve {
 					apply = true;
 				}
 				else {
-					gravity = false;
-					getSceneManagerPointer()->getSceneNode("The Ball Parent")->setPosition(glm::vec3(0.0f, 1.1f, 21.0f));
-					linearMomentum = glm::vec3(0.0f);
-					angularMomentum = glm::vec4(0.0f);
-					angularVelocity = glm::vec3(0.0f);
-					force = glm::vec3(0.0f);
-					rotSpeed = 0;
-					apply = false;
+					respawn();
 				}
 				cube_spawned = !cube_spawned;
 				pressed_force = 0;
