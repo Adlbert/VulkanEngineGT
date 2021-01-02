@@ -22,7 +22,7 @@ namespace ve {
 	static std::default_random_engine e{ 12345 };					//F�r Zufallszahlen
 	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//F�r Zufallszahlen
 
-	//Implemented MoveTowardsEnemyFlag and MoveTowardsOwnFlag
+	//Implemented MoveTowardsEnemyFlag and MoveTowardsOwnFlag	
 	enum class Action {
 		None = 0,
 		MoveTowardsEnemyFlag = 1,
@@ -41,7 +41,8 @@ namespace ve {
 		Ammu = 1,
 		EnemyDist = 2,
 		TeamMateDist = 3,
-		DistToFlag = 4
+		DistToEnemyFlag = 4,
+		TargetAlive = 5,
 	};
 
 	enum class Comperator {
@@ -413,8 +414,10 @@ namespace ve {
 		std::string name;
 		float health;
 		float ammu;
-		float distToFlag;
+		float distToEnemyFlag;
 		float enemyDist;
+		Agent* target;
+		float distToTeamMate;
 		DecisionTree dT;
 
 		void MoveTowardsEnemy() {
@@ -426,16 +429,33 @@ namespace ve {
 			position = nextPositionToMoveToFlag;
 		}
 		void MoveTowardsOwnFlag() {
-			std::cout << "MoveTowardsOwnFlag" << std::endl;
+			std::cout << "Flee" << std::endl;
 		}
 		void Heal() {
 			std::cout << "Heal" << std::endl;
 		}
 		void Shoot() {
-			std::cout << "Shoot" << std::endl;
+			if (d(e) > 0) {
+				ammu -= 1;
+				target->health -= 2;
+				std::cout << "Shoot" << std::endl;
+				if (target->health < 1) {
+					std::cout << target->name << " Dead" << std::endl;
+				}
+			}
+			else
+				std::cout << "Shot missed" << std::endl;
 		}
 		void Melee() {
-			std::cout << "Melee" << std::endl;
+			if (d(e) > 0) {
+				target->health -= 4;
+				std::cout << "Melee" << std::endl;
+				if (target->health < 1) {
+					std::cout << target->name << " Dead" << std::endl;
+				}
+			}
+			else
+				std::cout << "Melee missed" << std::endl;
 		}
 		void Flank() {
 			std::cout << "Flank" << std::endl;
@@ -487,13 +507,15 @@ namespace ve {
 			case Feature::Health:
 				return health;
 			case Feature::Ammu:
-				return health;
+				return ammu;
 			case Feature::EnemyDist:
-				return health;
+				return enemyDist;
 			case Feature::TeamMateDist:
-				return health;
-			case Feature::DistToFlag:
-				return health;
+				return distToTeamMate;
+			case Feature::DistToEnemyFlag:
+				return distToEnemyFlag;
+			case Feature::TargetAlive:
+				return target->health > 0;
 			}
 		}
 	};
@@ -512,9 +534,11 @@ namespace ve {
 			agent->name = "Agent" + std::to_string(i);
 			agent->position = glm::ivec2(parent->getPosition().x, parent->getPosition().z);
 			agent->health = 25;
-			agent->ammu = 2;
+			agent->ammu = 20;
 			agent->enemyDist = Pathfinder::MAP_HEIGHT - 1;
-			agent->distToFlag = Pathfinder::MAP_HEIGHT - 1;
+			agent->target = nullptr;
+			agent->distToEnemyFlag = Pathfinder::MAP_HEIGHT - 1;
+			agent->distToTeamMate = Pathfinder::MAP_HEIGHT - 1;
 			agent->dT = DecisionTree::LoadTree("media/DT.txt");
 			return agent;
 		}
@@ -559,12 +583,14 @@ namespace ve {
 
 		void prepareDecsion(Agent* agent, std::vector<Agent*> enemyTeam, glm::ivec2 captureFlagPos) {
 			float minDistance = std::numeric_limits<float>::max();
+			Agent* target = nullptr;
 			for (Agent* enemy : enemyTeam) {
 				Pathfinder* pf = new Pathfinder(agent->position, enemy->position);
 				std::vector<glm::ivec2> pathToEnemy = pf->result;
 				float distance = pathToEnemy.size();
 				if (distance < minDistance) {
 					minDistance = distance;
+					target = enemy;
 					if (pathToEnemy.size() > 1)
 						agent->nextPositionToMoveToEnemy = pathToEnemy[1];
 					else
@@ -573,9 +599,10 @@ namespace ve {
 				delete pf;
 			}
 			agent->enemyDist = minDistance;
+			agent->target = target;
 			Pathfinder* pf = new Pathfinder(agent->position, captureFlagPos);
 			std::vector<glm::ivec2> pathToFlag = pf->result;
-			agent->distToFlag = pathToFlag.size();
+			agent->distToEnemyFlag = pathToFlag.size();
 			if (pathToFlag.size() > 1)
 				agent->nextPositionToMoveToFlag = pathToFlag[1];
 			else
@@ -589,6 +616,8 @@ namespace ve {
 			if (g_gameLost)
 				return;
 			for (Agent* agent : redTeam) {
+				if (agent->health <= 0)
+					continue;
 				prepareDecsion(agent, blueTeam, glm::ivec2(0, 3));
 				executeDT(agent);
 				if (agent->position == glm::ivec2(0, 3)) {
@@ -597,6 +626,8 @@ namespace ve {
 				}
 			}
 			for (Agent* agent : blueTeam) {
+				if (agent->health <= 0)
+					continue;
 				prepareDecsion(agent, redTeam, glm::ivec2(3, 7));
 				executeDT(agent);
 				if (agent->position == glm::ivec2(3, 7)) {
