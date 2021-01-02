@@ -162,20 +162,6 @@ namespace ve {
 		std::vector<Node*> closed_list;
 		std::vector<Node*> route;
 
-		static const int MAP_HEIGHT = 8;
-		static const int MAP_WIDTH = 7;
-
-		float cost_map[MAP_HEIGHT][MAP_WIDTH] = {
-			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0},
-			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0, 0.1},
-			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 0.1},
-			{1.0, 0.5, 0.5, 0.1, 0.1, 1.0, 0.1},
-			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 0.5},
-			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
-			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 0.1},
-			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
-		};
-		Node map[MAP_HEIGHT][MAP_WIDTH] = {};
 		glm::ivec2 start;
 		glm::ivec2 end;
 		//glm::ivec2 start = glm::ivec2(1, 4);
@@ -251,6 +237,34 @@ namespace ve {
 		}
 
 	public:
+
+		static const int MAP_HEIGHT = 20;
+		static const int MAP_WIDTH = 7;
+
+		float cost_map[MAP_HEIGHT][MAP_WIDTH] = {
+			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0},
+			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0, 0.1},
+			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 0.1},
+			{1.0, 0.5, 0.5, 0.1, 0.1, 1.0, 0.1},
+			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 0.5},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 0.1},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
+			{0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0},
+			{1.0, 0.1, 0.5, 0.1, 0.1, 1.0, 0.1},
+			{1.0, 1.0, 0.5, 0.1, 0.1, 1.0, 0.1},
+			{1.0, 0.5, 0.5, 0.1, 0.1, 1.0, 0.1},
+			{1.0, 0.1, 0.1, 0.1, 0.1, 1.0, 0.5},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 0.1},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
+			{1.0, 0.1, 0.1, 0.5, 1.0, 1.0, 1.0},
+		};
+		Node map[MAP_HEIGHT][MAP_WIDTH] = {};
+
 		std::vector<glm::ivec2> result;
 
 
@@ -479,8 +493,8 @@ namespace ve {
 			agent->position = glm::ivec2(parent->getPosition().x, parent->getPosition().z);
 			agent->health = 25;
 			agent->ammu = 2;
-			agent->enemyDist = 7;
-			agent->distToFlag = 7;
+			agent->enemyDist = Pathfinder::MAP_HEIGHT-1;
+			agent->distToFlag = Pathfinder::MAP_HEIGHT - 1;
 			agent->dT = DecisionTree::LoadTree("media/DT.txt");
 			return agent;
 		}
@@ -915,7 +929,7 @@ namespace ve {
 				VESceneNode* e1, * e1Parent;
 				e1Parent = getSceneManagerPointer()->createSceneNode("The Cube" + std::to_string(i) + " Parent", pScene, glm::mat4(1.0));
 				VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Cube" + std::to_string(i), "media/models/test/crate_red", "cube.obj"));
-				e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(1.0f + i, 1.0f, 7.0f)));
+				e1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(1.0f + i, 1.0f, Pathfinder::MAP_HEIGHT - 1)));
 				e1Parent->addChild(e1);
 			}
 
