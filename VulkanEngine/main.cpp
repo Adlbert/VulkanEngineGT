@@ -16,10 +16,13 @@ namespace ve {
 
 	uint32_t g_score = 0;				//derzeitiger Punktestand
 	double g_time = 30.0;				//zeit die noch �brig ist
+	int g_tries = 0;
+	int g_max_tries = 10;
 	bool g_gameLost = false;			//true... das Spiel wurde verloren
 	bool g_restart = false;			//true...das Spiel soll neu gestartet werden
 	glm::vec2 rotation_pos;
 	float pressed_force;
+
 
 	static std::default_random_engine e{ 12345 };					//F�r Zufallszahlen
 	static std::uniform_real_distribution<> d{ -10.0f, 10.0f };		//F�r Zufallszahlen
@@ -51,7 +54,7 @@ namespace ve {
 					nk_label(ctx, outbuffer, NK_TEXT_LEFT);
 
 					nk_layout_row_dynamic(ctx, 45, 1);
-					sprintf(outbuffer, "Time: %004.1lf", g_time);
+					sprintf(outbuffer, "Tries:%02d / %02d", g_tries, g_max_tries);
 					nk_label(ctx, outbuffer, NK_TEXT_LEFT);
 
 					struct nk_rect ball = nk_rect(ball_position.x, ball_position.y, ball_height, ball_width);
@@ -662,6 +665,7 @@ namespace ve {
 		glm::vec3 direction;
 		glm::vec3 force;
 		glm::vec3 angularMomentum;
+		glm::vec3 angularMomentumKeeper;
 		float rotSpeed;
 		const float mass = 1.0f;
 		const float static_friction = 0.0005f;
@@ -674,8 +678,64 @@ namespace ve {
 		bool cube_spawned = true;
 		bool apply = true;
 		int contact_count = 0;
+		const float maxDistance = 60;
+		glm::vec3 impactPosition;
+		glm::mat4 keeperStdTransform;
+		glm::mat4 keeperParentStdTransform;
 
 	private:
+
+		glm::vec3 calclualteBallImpact(veEvent event) {
+			VESceneNode* ballParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
+			glm::mat4 ballTransform = ballParent->getTransform();
+			int maxLoops = 100;
+			int loops = 0;
+			while (ballTransform[3][2] < 75 && loops < maxLoops) {
+				ballTransform *= glm::translate(glm::mat4(1.0f), force);
+				loops++;
+			}
+			return glm::vec3(ballTransform[3][0], ballTransform[3][1], ballTransform[3][2]);
+		}
+
+		void moveKI(veEvent event) {
+			VESceneNode* ballParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
+			VESceneNode* keeperParent = getSceneManagerPointer()->getSceneNode("The Keeper Parent");
+			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Keeper");
+			glm::vec3 position = keeperParent->getPosition(); //in Local Space
+			float rotSpeedKeeper = 2.0f;
+			if (impactPosition.x < 0)
+				rotSpeedKeeper *= -1;
+			glm::vec3 keeperForce = impactPosition - keeperParent->getPosition();
+			glm::vec3 keeperMomentum = keeperForce * event.dt;
+
+			float distance = glm::distance(ballParent->getPosition(), keeperParent->getPosition());
+			if (distance < maxDistance) {
+				keeperParent->multiplyTransform(glm::translate(glm::mat4(1.0f), keeperMomentum));
+			}
+
+			//Assume that the objects center is its postion
+			glm::vec4 center = glm::vec4(position.x, position.y, position.z, 1);
+
+			glm::mat4 orientation = keeperParent->getTransform(); //in Local 
+			// Kreuzprodukt von (dem Produkt zwischen orientierungsmatrix und center vector) und dem force vector.
+			glm::vec4 c = orientation * center;
+			glm::vec3 torque = glm::cross(glm::vec3(c.x, c.y, c.z), keeperForce);
+			// mass * velocity; mass = 1;
+			angularMomentumKeeper += (float)event.dt * torque; //es selbst plus delta time mal torque.
+			//orientierungsmatrix mal dem inversen inertia tensor mal der transponierten orientierungsmatrix mal dem angular momentum.
+			glm::vec3 angularVelocity = orientation * glm::mat4(inertiaTensor) * glm::transpose(orientation) * glm::vec4(angularMomentumKeeper.x, angularMomentumKeeper.y, angularMomentumKeeper.z, 1);
+
+			glm::vec4 rot4 = glm::vec4(1.0);
+			float angle = rotSpeedKeeper * (float)event.dt;
+			glm::vec3 rot_axis = glm::vec3(0, 0, 1);
+			rot4 = e1->getTransform() * glm::vec4(rot_axis.x, rot_axis.y, rot_axis.z, 1.0);
+			glm::vec3  rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
+
+			rot3 = rot3 + float(event.dt) * glm::matrixCross3(angularVelocity) * rot3;
+			glm::mat4  rotate = glm::rotate(glm::mat4(1.0), angle, rot3);
+			e1->multiplyTransform(rotate);
+		}
+
 		//m .. mass
 		glm::mat4 get_K(float mA, float mB, glm::vec3 rA, glm::vec3 rB, glm::mat3 itA, glm::mat3 itB) {
 			glm::mat4 lhs = -(1 / mB) * glm::mat3() + glm::matrixCross3(rB) * glm::inverse(itB) * glm::matrixCross3(rB);
@@ -819,86 +879,133 @@ namespace ve {
 			e1->multiplyTransform(rotate);
 		}
 
+		void resolveContacts(std::set<vpe::contact> contacts) {
+			std::set<vpe::contact>::iterator itr;
+			glm::vec3 f = glm::vec3(0.0f);
+			getSceneManagerPointer()->getSceneNode("The Ball Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
+			float e = 0.4f;
+			float dF = 0.2;
+			int used_contacts = 0;
+
+			std::cout << "force" << glm::to_string(force) << std::endl;
+			std::cout << "linearMomentum" << glm::to_string(linearMomentum) << std::endl;
+			std::cout << "angularMomentum" << glm::to_string(angularMomentum) << std::endl;
+			std::cout << "::::::::::::::::::" << std::endl;
+
+			for (itr = contacts.begin(); itr != contacts.end(); itr++) {
+				////assume postion as center
+				glm::vec3 rA = itr->obj2->posW2L(itr->obj2->pos()) - itr->obj2->posW2L(itr->pos);
+				glm::vec3 rB = itr->obj1->posW2L(itr->obj1->pos()) - itr->obj1->posW2L(itr->pos);
+
+				glm::vec3 lvB = glm::vec3(.1, .1, .1);
+				glm::vec3 aVB = glm::vec3(.1, .1, .1);
+				glm::vec3 prel = get_prel(linearMomentum, lvB, angularMomentum, aVB, rA, rB);
+				//glm::vec3 n = glm::normalize(glm::vec3(0, 1, 0));
+				glm::vec3 n = itr->normal;
+				float d = get_d(n, prel);
+				if (d == 0) {
+					f += fHat(d, linearMomentum, lvB, angularMomentum, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
+					used_contacts++;
+				}
+				if (d < 0) {
+					glm::vec3 tf = fHat(d, linearMomentum, lvB, angularMomentum, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
+					if (tf.y == tf.y) {
+						f += tf;
+						used_contacts++;
+					}
+					else {
+						std::cout << "NAN" << std::endl;
+					}
+				}
+			}
+			if (used_contacts > 0)
+				f /= used_contacts;
+			force = f;
+			contact_count++;
+			linearMomentum = glm::vec3(0, 0, 0);
+			//angularMomentum = glm::vec3(0, 0, 0);
+			std::cout << "angularVelocity" << glm::to_string(angularMomentum) << std::endl;
+			std::cout << "force" << glm::to_string(force) << std::endl;
+			std::cout << "__________________" << std::endl;
+		}
+
 		void checkCollision() {
 			if (contact_count > 4) {
 				contact_count = 0;
 				respawn();
+				g_tries++;
 			}
-			glm::vec3 positionCube0 = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getTransform()[3];
-			glm::mat4 rotationCube0 = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getTransform();
-			glm::vec3 positionPlane = glm::vec3(getSceneManagerPointer()->getSceneNode("The Plane")->getPosition());
+			glm::vec3 positionBall = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getTransform()[3];
+			glm::mat4 transformBall = getSceneManagerPointer()->getSceneNode("The Ball Parent")->getTransform();
+			glm::vec3 positionPlane = glm::vec3(getSceneManagerPointer()->getSceneNode("The Goal Parent")->getPosition());
+			glm::vec3 positionGoal = getSceneManagerPointer()->getSceneNode("The Goal Parent")->getTransform()[3];
+			glm::vec3 positionKeeper = getSceneManagerPointer()->getSceneNode("The Keeper Parent")->getPosition();
+			glm::mat4 transformKeeper = getSceneManagerPointer()->getSceneNode("The Keeper Parent")->getTransform();
 
-			//lm::mat3(getSceneManagerPointer()->getSceneNode("The Cube0")->getRotation())
-			vpe::Box cube0{ positionCube0, rotationCube0 };
-			//vpe::Sphere cube0{ positionCube0, 0.2f };
-			//assume that the center of the plane is directly under the cube
-			positionPlane = positionCube0;
+			positionPlane = positionBall;
 			positionPlane.y = 0;
-			vpe::Box plane{ positionPlane, scale(mat4(1.0f), vec3(100.0f, 1.0f, 100.0f)) };
 
+			vpe::Box ball{ positionBall, transformBall };
+			vpe::Box goal{ positionGoal + glm::vec3(7.5, 0, 0) , scale(mat4(1.0f), vec3(15.0f, 12.0f, 1.0f)) };
+			vpe::Box leftBar{ positionGoal + glm::vec3(0,0,0), scale(mat4(1.0f), vec3(0.5f, 12.0f, 1.0f)) };
+			vpe::Box rightBar{ positionGoal + glm::vec3(15,0,0), scale(mat4(1.0f), vec3(0.5f, 12.0f, 1.0f)) };
+			vpe::Box topBar{ positionGoal + glm::vec3(7.5,7.5,0), scale(mat4(1.0f), vec3(16, 1.0f, 1)) };
+			vpe::Box keeper{ positionKeeper, transformKeeper };
+			vpe::Box plane{ positionPlane, scale(mat4(1.0f), vec3(1000.0f, 1.0f, 1000.0f)) };
 
+			std::set<vpe::contact> contacts;
 			vec3 mtv(0, 1, 0); //minimum translation vector
 
-			bool hit = vpe::collision(cube0, plane, mtv);
+			bool hit_plane = vpe::collision(ball, plane, mtv);
+			if (hit_plane) {
+				vpe::contacts(ball, plane, mtv, contacts);
+				std::cout << "hit_plane" << contacts.size() << std::endl;
+			}
 
-			if (hit) {
+			bool hit_goal = vpe::collision(ball, goal, mtv);
+			bool hit_leftBar = vpe::collision(ball, leftBar, mtv);
+			bool hit_rightBar = vpe::collision(ball, rightBar, mtv);
+			bool hit_topBar = vpe::collision(ball, topBar, mtv);
+			bool hit_keeper = vpe::collision(ball, keeper, mtv);
+			bool hit_any = hit_plane || hit_leftBar || hit_rightBar || hit_topBar || hit_keeper;
+
+			if (hit_keeper) {
+				vpe::contacts(ball, keeper, mtv, contacts);
+				std::cout << "hit_keeper" << contacts.size() << std::endl;
 				respawn();
-				std::set<vpe::contact> contacts;
-				vpe::contacts(cube0, plane, mtv, contacts);
-				std::set<vpe::contact>::iterator itr;
-				glm::vec3 f = glm::vec3(0.0f);
-				getSceneManagerPointer()->getSceneNode("The Ball Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
-				float e = 0.4f;
-				float dF = 0.2;
-				int used_contacts = 0;
+			}
+			if (hit_leftBar) {
+				vpe::contacts(ball, leftBar, mtv, contacts);
+				std::cout << "hit_leftBar" << contacts.size() << std::endl;
+				respawn();
+			}
+			if (hit_rightBar) {
+				vpe::contacts(ball, rightBar, mtv, contacts);
+				std::cout << "hit_rightBar" << contacts.size() << std::endl;
+				respawn();
+			}
+			if (hit_topBar) {
+				vpe::contacts(ball, topBar, mtv, contacts);
+				std::cout << "hit_topBar" << contacts.size() << std::endl;
+				respawn();
+			}
 
-				std::cout << "hit_ " << contacts.size() << std::endl;
-				std::cout << "force" << glm::to_string(force) << std::endl;
-				std::cout << "linearMomentum" << glm::to_string(linearMomentum) << std::endl;
-				std::cout << "angularMomentum" << glm::to_string(angularMomentum) << std::endl;
-				std::cout << "::::::::::::::::::" << std::endl;
-
-				for (itr = contacts.begin(); itr != contacts.end(); itr++) {
-					////assume postion as center
-					glm::vec3 rA = itr->obj1->posW2L(itr->obj2->pos()) - itr->obj2->posW2L(itr->pos);
-					glm::vec3 rB = itr->obj2->posW2L(itr->obj1->pos()) - itr->obj1->posW2L(itr->pos);
-
-					glm::vec3 lvB = glm::vec3(.1, .1, .1);
-					glm::vec3 aVB = glm::vec3(.1, .1, .1);
-					glm::vec3 prel = get_prel(linearMomentum, lvB, angularMomentum, aVB, rA, rB);
-					glm::vec3 n = glm::normalize(glm::vec3(0, 1, 0));
-					float d = get_d(n, prel);
-					if (d == 0) {
-						f += fHat(d, linearMomentum, lvB, angularMomentum, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
-						used_contacts++;
-					}
-					if (d < 0) {
-						glm::vec3 tf = fHat(d, linearMomentum, lvB, angularMomentum, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
-						if (tf.y == tf.y) {
-							f += tf;
-							used_contacts++;
-						}
-						else {
-							std::cout << "NAN" << std::endl;
-						}
-					}
-				}
-
-				if (used_contacts > 0)
-					f /= used_contacts;
-				force = f;
-				contact_count++;
-				//linearMomentum = glm::vec3(0, 0, 0);
-				//angularMomentum = glm::vec3(0, 0, 0);
-				std::cout << "angularVelocity" << glm::to_string(angularMomentum) << std::endl;
-				std::cout << "force" << glm::to_string(force) << std::endl;
-				std::cout << "__________________" << std::endl;
+			if (contacts.size() > 0)
+				resolveContacts(contacts);
+			else if (!hit_any && hit_goal) {
+				respawn();
+				g_tries++;
+				std::cout << "hit_goal" << std::endl;
+				std::cout << glm::to_string(positionBall) << std::endl;
+				return;
 			}
 		}
 
 		void respawn() {
 			gravity = false;
 			getSceneManagerPointer()->getSceneNode("The Ball Parent")->setPosition(glm::vec3(0.0f, 1.1f, 21.0f));
+			getSceneManagerPointer()->getSceneNode("The Keeper Parent")->setTransform(keeperParentStdTransform);
+			getSceneManagerPointer()->getSceneNode("The Keeper")->setTransform(keeperStdTransform);
 			linearMomentum = glm::vec3(0.0f);
 			angularMomentum = glm::vec4(0.0f);
 			angularVelocity = glm::vec3(0.0f);
@@ -909,32 +1016,43 @@ namespace ve {
 
 	protected:
 		virtual void onFrameStarted(veEvent event) {
+			if (g_tries == g_max_tries) {
+				g_gameLost = true;
+			}
+			if (g_restart) {
+				g_restart = false;
+				g_gameLost = false;
+				respawn();
+				g_tries = 0;
+				g_score = 0;
+			}
 			checkCollision();
-			applyRotation(event);
 			if (apply) {
+				applyRotation(event);
 				applyMovement(event, gravity);
 				dampenForce(0.1f, force);
-				//dampenForce(0.002f, linearMomentum);
+				moveKI(event);
 			}
 		};
 
 		virtual bool onKeyboard(veEvent event) {
-			if (event.idata3 == GLFW_RELEASE) {
+			if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_RELEASE) {
 				if (cube_spawned) {
 					VECamera* c = getSceneManagerPointer()->getCamera();
 					direction = getSceneManagerPointer()->getCamera()->getWorldTransform()[2];
-					direction = glm::vec3(0, 1, 0);
 					force += pressed_force * direction;
 					gravity = true;
+					impactPosition = calclualteBallImpact(event);
 					//rotSpeed = 1.5f;
 					//rotSpeed = (float)d(e) / 10;
 					//rotSpeed = 0.0f;
 					apply = true;
+					std::system("CLS");
 				}
 				else {
 					respawn();
 				}
-				cube_spawned = !cube_spawned;
+				//cube_spawned = !cube_spawned;
 				pressed_force = 0;
 				return true;
 			}
@@ -943,6 +1061,9 @@ namespace ve {
 				pressed_force += event.dt * 10;
 				if (pressed_force > max_pressed_force)
 					pressed_force = max_pressed_force;
+			}
+			if (event.idata1 == GLFW_KEY_R && event.idata3 == GLFW_PRESS) {
+				respawn();
 			}
 			return false;
 		}
@@ -961,6 +1082,8 @@ namespace ve {
 			force = glm::vec3();
 			rotSpeed = 0;
 			apply = false;
+			keeperStdTransform = getSceneManagerPointer()->getSceneNode("The Keeper")->getTransform();
+			keeperParentStdTransform = getSceneManagerPointer()->getSceneNode("The Keeper Parent")->getTransform();
 		};
 
 		///Destructor of class EventListenerCollision
@@ -1021,8 +1144,18 @@ namespace ve {
 			VECHECKPOINTER(g1 = getSceneManagerPointer()->loadModel("The Goal", "media/models/game/", "goal.obj"));
 			g1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.03f, 0.03f, 0.03f)));
 			//goal seems to be 15 width
+			//goal seems to be 5 height
 			g1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-7.5f, 0.55f, 75.0f)));
 			g1Parent->addChild(g1);
+
+			VESceneNode* k1, * k1Parent;
+			k1Parent = getSceneManagerPointer()->createSceneNode("The Keeper Parent", pScene, glm::mat4(1.0));
+			VECHECKPOINTER(k1 = getSceneManagerPointer()->loadModel("The Keeper", "media/models/test/", "cube1.obj"));
+			k1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(2, 4, 1)));
+			//goal seems to be 15 width
+			//goal seems to be 5 height
+			k1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 3.0f, 70.0f)));
+			k1Parent->addChild(k1);
 
 
 
