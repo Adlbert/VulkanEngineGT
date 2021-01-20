@@ -678,7 +678,7 @@ namespace ve {
 		bool cube_spawned = true;
 		bool apply = true;
 		int contact_count = 0;
-		const float maxDistance = 60;
+		const float maxDistance = 100;
 		glm::vec3 impactPosition;
 		glm::mat4 keeperStdTransform;
 		glm::mat4 keeperParentStdTransform;
@@ -690,35 +690,42 @@ namespace ve {
 			glm::mat4 ballTransform = ballParent->getTransform();
 			int maxLoops = 100;
 			int loops = 0;
+			glm::vec3 momentum = glm::vec3();
 			while (ballTransform[3][2] < 75 && loops < maxLoops) {
-				ballTransform *= glm::translate(glm::mat4(1.0f), force);
+				momentum += (g + force);
+				ballTransform *= glm::translate(glm::mat4(1.0f), momentum);
 				loops++;
 			}
-			return glm::vec3(ballTransform[3][0], ballTransform[3][1], ballTransform[3][2]);
+			return glm::vec3(ballTransform[3][0], ballTransform[3][1] - 4.0f, ballTransform[3][2]);
 		}
 
 		void moveKI(veEvent event) {
+			float rotSpeedKeeper = 1.0f;
+			float keeperSpeed = 20.0f;
 			VESceneNode* ballParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
 			VESceneNode* keeperParent = getSceneManagerPointer()->getSceneNode("The Keeper Parent");
 			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Keeper");
-			glm::vec3 position = keeperParent->getPosition(); //in Local Space
-			float rotSpeedKeeper = 2.0f;
+			glm::vec3 keeperPosition = keeperParent->getPosition(); //in Local Space
 			if (impactPosition.x < 0)
 				rotSpeedKeeper *= -1;
-			glm::vec3 keeperForce = impactPosition - keeperParent->getPosition();
-			glm::vec3 keeperMomentum = keeperForce * event.dt;
+			if (impactPosition.y < 2.5)
+				rotSpeedKeeper *= 1.5;
+			glm::vec3 keeperForce = glm::normalize(impactPosition - keeperPosition);
+			glm::vec3 keeperMomentum = keeperForce * event.dt * keeperSpeed;
+			//only move on goal line
+			keeperMomentum.z = 0;
 
-			float distance = glm::distance(ballParent->getPosition(), keeperParent->getPosition());
+			float distance = glm::distance(ballParent->getPosition(), keeperPosition);
 			if (distance < maxDistance) {
 				keeperParent->multiplyTransform(glm::translate(glm::mat4(1.0f), keeperMomentum));
 			}
 
 			//Assume that the objects center is its postion
-			glm::vec4 center = glm::vec4(position.x, position.y, position.z, 1);
+			glm::vec4 center = glm::vec4(keeperPosition.x, keeperPosition.y, keeperPosition.z, 1);
 
 			glm::mat4 orientation = keeperParent->getTransform(); //in Local 
-			// Kreuzprodukt von (dem Produkt zwischen orientierungsmatrix und center vector) und dem force vector.
 			glm::vec4 c = orientation * center;
+			// Kreuzprodukt von (dem Produkt zwischen orientierungsmatrix und center vector) und dem force vector.
 			glm::vec3 torque = glm::cross(glm::vec3(c.x, c.y, c.z), keeperForce);
 			// mass * velocity; mass = 1;
 			angularMomentumKeeper += (float)event.dt * torque; //es selbst plus delta time mal torque.
@@ -727,11 +734,11 @@ namespace ve {
 
 			glm::vec4 rot4 = glm::vec4(1.0);
 			float angle = rotSpeedKeeper * (float)event.dt;
-			glm::vec3 rot_axis = glm::vec3(0, 0, 1);
+			glm::vec3 rot_axis = glm::vec3(0.0, 0.0, 1.0) *-1.0f;
 			rot4 = e1->getTransform() * glm::vec4(rot_axis.x, rot_axis.y, rot_axis.z, 1.0);
 			glm::vec3  rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
 
-			rot3 = rot3 + float(event.dt) * glm::matrixCross3(angularVelocity) * rot3;
+			rot3 += float(event.dt) * glm::matrixCross3(angularVelocity) * rot3;
 			glm::mat4  rotate = glm::rotate(glm::mat4(1.0), angle, rot3);
 			e1->multiplyTransform(rotate);
 		}
@@ -995,8 +1002,10 @@ namespace ve {
 			else if (!hit_any && hit_goal) {
 				respawn();
 				g_tries++;
+				g_score++;
 				std::cout << "hit_goal" << std::endl;
 				std::cout << glm::to_string(positionBall) << std::endl;
+				std::cout << glm::to_string(impactPosition) << std::endl;
 				return;
 			}
 		}
@@ -1008,6 +1017,7 @@ namespace ve {
 			getSceneManagerPointer()->getSceneNode("The Keeper")->setTransform(keeperStdTransform);
 			linearMomentum = glm::vec3(0.0f);
 			angularMomentum = glm::vec4(0.0f);
+			angularMomentumKeeper = glm::vec4(0.0f);
 			angularVelocity = glm::vec3(0.0f);
 			force = glm::vec3(0.0f);
 			rotSpeed = 0;
