@@ -678,10 +678,14 @@ namespace ve {
 		bool cube_spawned = true;
 		bool apply = true;
 		int contact_count = 0;
-		const float maxDistance = 100;
 		glm::vec3 impactPosition;
 		glm::mat4 keeperStdTransform;
 		glm::mat4 keeperParentStdTransform;
+		float keeperSpeed;
+
+		//Balancing
+		const float maxDistance = 100.0f;
+		const float keeperSpeed_Std = 28.0f;
 
 	private:
 
@@ -701,7 +705,6 @@ namespace ve {
 
 		void moveKI(veEvent event) {
 			float rotSpeedKeeper = 1.0f;
-			float keeperSpeed = 20.0f;
 			VESceneNode* ballParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
 			VESceneNode* keeperParent = getSceneManagerPointer()->getSceneNode("The Keeper Parent");
 			VESceneNode* e1 = getSceneManagerPointer()->getSceneNode("The Keeper");
@@ -1022,6 +1025,9 @@ namespace ve {
 			force = glm::vec3(0.0f);
 			rotSpeed = 0;
 			apply = false;
+			//Some randomg factor to the keeper movement
+			keeperSpeed = keeperSpeed_Std;
+			keeperSpeed += d(e);
 		}
 
 	protected:
@@ -1094,6 +1100,7 @@ namespace ve {
 			apply = false;
 			keeperStdTransform = getSceneManagerPointer()->getSceneNode("The Keeper")->getTransform();
 			keeperParentStdTransform = getSceneManagerPointer()->getSceneNode("The Keeper Parent")->getTransform();
+			keeperSpeed = keeperSpeed_Std;
 		};
 
 		///Destructor of class EventListenerCollision
