@@ -737,7 +737,7 @@ namespace ve {
 
 			glm::vec4 rot4 = glm::vec4(1.0);
 			float angle = rotSpeedKeeper * (float)event.dt;
-			glm::vec3 rot_axis = glm::vec3(0.0, 0.0, 1.0) *-1.0f;
+			glm::vec3 rot_axis = glm::vec3(0.0, 0.0, 1.0) * -1.0f;
 			rot4 = e1->getTransform() * glm::vec4(rot_axis.x, rot_axis.y, rot_axis.z, 1.0);
 			glm::vec3  rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
 
@@ -747,10 +747,16 @@ namespace ve {
 		}
 
 		//m .. mass
-		glm::mat4 get_K(float mA, float mB, glm::vec3 rA, glm::vec3 rB, glm::mat3 itA, glm::mat3 itB) {
-			glm::mat4 lhs = -(1 / mB) * glm::mat3() + glm::matrixCross3(rB) * glm::inverse(itB) * glm::matrixCross3(rB);
-			glm::mat4 rhs = (1 / mA) * glm::mat3() + glm::matrixCross3(rA) * glm::inverse(itA) * glm::matrixCross3(rA);
-			return lhs - rhs;
+		glm::mat3 get_K(float mA, float mB, glm::vec3 rA, glm::vec3 rB, glm::mat3 itA, glm::mat3 itB) {
+			glm::mat3 a = (-1) * (1 / mB) * glm::mat3(1);
+			glm::mat3 b = glm::matrixCross3(rB) * glm::inverse(itB) * glm::matrixCross3(rB);
+			glm::mat3 c = (-1) * (1 / mA) * glm::mat3(1);
+			glm::mat3 d = glm::matrixCross3(rA) * glm::inverse(itA) * glm::matrixCross3(rA);
+
+			return a + b + c + d;
+			//glm::mat4 lhs = glm::matrixCross3(rB) * glm::inverse(itB) * glm::matrixCross3(rB);
+			//glm::mat4 rhs = glm::matrixCross3(rA) * glm::inverse(itA) * glm::matrixCross3(rA);
+			//return (-1) * lhs + (-1) * rhs;
 		}
 
 		glm::vec3 get_prel(glm::vec3 lvA, glm::vec3 lvB, glm::vec3 aVA, glm::vec3 aVB, glm::vec3 rA, glm::vec3 rB) {
@@ -779,24 +785,27 @@ namespace ve {
 		}
 
 		//f
-		glm::vec3 get_mag_imp_dirN(float e, float d, glm::vec3 n, glm::mat4 K, float dF, glm::vec3 t) {
-			float d1 = -(1 + e) * d;
+		glm::vec3 get_mag_imp_dirN(float e, float d, glm::vec3 n, glm::mat3 K, float dF, glm::vec3 t) {
+			float d1 = (-1) * (1 + e) * d;
 			glm::vec3 n_ = n - dF * t;
-			glm::vec3 d2 = glm::translate(n) * K * glm::vec4(n_.x, n_.y, n_.z, 0.0f);
+			glm::vec3 d2 = n * K * n_;
 			return d1 / d2;
 		}
 
 		glm::vec3 fHat(glm::vec3 lvA, glm::vec3 lvB, glm::vec3 aVA, glm::vec3 aVB, float mA, float mB, glm::vec3 rA, glm::vec3 rB, glm::mat3 itA, glm::mat3 itB, float e, glm::vec3 n, float dF) {
 			glm::vec3 prel = get_prel(lvA, lvB, aVA, aVB, rA, rB);
 			float d = get_d(n, prel);
-			return fHat(d, linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
+			return fHat(d, prel, linearMomentum, lvB, angularVelocity, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
 		}
 
-		glm::vec3 fHat(float d, glm::vec3 lvA, glm::vec3 lvB, glm::vec3 aVA, glm::vec3 aVB, float mA, float mB, glm::vec3 rA, glm::vec3 rB, glm::mat3 itA, glm::mat3 itB, float e, glm::vec3 n, float dF) {
-			glm::mat4 K = get_K(mA, mB, rA, rB, itA, itB);
-			glm::vec3 t = glm::vec3(1, 1, 1);
-			if (glm::length(aVA) != 0 || glm::length(aVB) != 0)
-				t = get_tangetial_velocity(lvA, lvB, aVA, aVB, rA, rB, n);
+		glm::vec3 fHat(float d, glm::vec3 prel, glm::vec3 lvA, glm::vec3 lvB, glm::vec3 aVA, glm::vec3 aVB, float mA, float mB, glm::vec3 rA, glm::vec3 rB, glm::mat3 itA, glm::mat3 itB, float e, glm::vec3 n, float dF) {
+			glm::mat3 K = get_K(mA, mB, rA, rB, itA, itB);
+			//glm::vec3 t = glm::vec3(0, 0, 0);
+			//if (glm::length(aVA) != 0 || glm::length(aVB) != 0)
+			//	t = get_tangetial_velocity(lvA, lvB, aVA, aVB, rA, rB, n);
+			//else
+			//	return glm::vec3(0, 0, 0);
+			glm::vec3 t = glm::normalize(prel - d * n);
 			glm::vec3 f = get_mag_imp_dirN(e, d, n, K, dF, t);
 			return f * n - dF * f * t;
 		}
@@ -852,7 +861,7 @@ namespace ve {
 			else {
 				linearMomentum += (float)event.dt * mass * force;
 			}
-			applyFriction();
+			//applyFriction();
 			eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum));
 		}
 
@@ -891,8 +900,10 @@ namespace ve {
 
 		void resolveContacts(std::set<vpe::contact> contacts) {
 			std::set<vpe::contact>::iterator itr;
-			glm::vec3 f = glm::vec3(0.0f);
-			getSceneManagerPointer()->getSceneNode("The Ball Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -1));
+			glm::vec3 f_hat = glm::vec3(0.0f);
+			std::cout << glm::to_string(getSceneManagerPointer()->getSceneNode("The Ball Parent")->getPosition()) << std::endl;
+			getSceneManagerPointer()->getSceneNode("The Ball Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -20));
+			std::cout << glm::to_string(getSceneManagerPointer()->getSceneNode("The Ball Parent")->getPosition()) << std::endl;
 			float e = 0.4f;
 			float dF = 0.2;
 			int used_contacts = 0;
@@ -904,43 +915,45 @@ namespace ve {
 
 			for (itr = contacts.begin(); itr != contacts.end(); itr++) {
 				////assume postion as center
-				glm::vec3 rA = itr->obj2->posW2L(itr->obj2->pos()) - itr->obj2->posW2L(itr->pos);
-				glm::vec3 rB = itr->obj1->posW2L(itr->obj1->pos()) - itr->obj1->posW2L(itr->pos);
-
-				glm::vec3 lvB = glm::vec3(.1, .1, .1);
-				glm::vec3 aVB = glm::vec3(.1, .1, .1);
-				glm::vec3 prel = get_prel(linearMomentum, lvB, angularMomentum, aVB, rA, rB);
-				//glm::vec3 n = glm::normalize(glm::vec3(0, 1, 0));
+				glm::vec3 rA = itr->obj1->pos() - itr->pos;
+				glm::vec3 rB = itr->obj2->pos() - itr->pos;
+				//rA = glm::normalize(rA);
+				//rB = glm::normalize(rB);
+				//rA = itr->obj1->posW2L(rA);
+				//rB = itr->obj1->posW2L(rB);
+				//glm::vec3 rB_l_2 = itr->obj2->posW2L(rB);
+				//glm::vec3 rB_w_2 = itr->obj2->posW2L(rB);
+				//glm::vec3 rB_l_1 = itr->obj1->posW2L(rB);
+				//glm::vec3 rB_w_1 = itr->obj1->posW2L(rB);
+				glm::vec3 lvB = glm::vec3(0, 0, 0);
+				glm::vec3 aVB = glm::vec3(0, 0, 0);
 				glm::vec3 n = itr->normal;
+
+				//relative velocity
+				glm::vec3 prel = get_prel(linearMomentum, lvB, angularMomentum, aVB, rA, rB);
+				//Closing Velocity
 				float d = get_d(n, prel);
+				//resting contacts
 				if (d == 0) {
-					f += fHat(d, linearMomentum, lvB, angularMomentum, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
+					f_hat += fHat(d, prel, linearMomentum, lvB, angularMomentum, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF) / contacts.size();
 					used_contacts++;
 				}
-				if (d < 0) {
-					glm::vec3 tf = fHat(d, linearMomentum, lvB, angularMomentum, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF);
-					if (tf.y == tf.y) {
-						f += tf;
-						used_contacts++;
-					}
-					else {
-						std::cout << "NAN" << std::endl;
-					}
+				//seperating contacts
+				if (d > 0) {
+					f_hat += fHat(d, prel, linearMomentum, lvB, angularMomentum, aVB, mass, 1, rA, rB, inertiaTensor, inertiaTensor, e, n, dF) / contacts.size();
+					used_contacts++;
 				}
 			}
-			if (used_contacts > 0)
-				f /= used_contacts;
-			force = f;
+			f_hat /= 1000;
 			contact_count++;
-			linearMomentum = glm::vec3(0, 0, 0);
-			//angularMomentum = glm::vec3(0, 0, 0);
+			linearMomentum += f_hat;
 			std::cout << "angularVelocity" << glm::to_string(angularMomentum) << std::endl;
 			std::cout << "force" << glm::to_string(force) << std::endl;
 			std::cout << "__________________" << std::endl;
 		}
 
 		void checkCollision() {
-			if (contact_count > 4) {
+			if (contact_count > 40) {
 				contact_count = 0;
 				respawn();
 				g_tries++;
