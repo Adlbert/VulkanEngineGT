@@ -695,12 +695,18 @@ namespace ve {
 			int maxLoops = 100;
 			int loops = 0;
 			glm::vec3 momentum = glm::vec3();
+			glm::vec3 m_force = force;
 			while (ballTransform[3][2] < 75 && loops < maxLoops) {
-				momentum += (g + force);
+				momentum += (g + m_force);
 				ballTransform *= glm::translate(glm::mat4(1.0f), momentum);
+				dampenForce(0.1f, m_force);
 				loops++;
 			}
-			return glm::vec3(ballTransform[3][0], ballTransform[3][1] - 4.0f, ballTransform[3][2]);
+			float y = glm::max(ballTransform[3][1] - 5.0f, 1.0f);
+			y = glm::min(y, 6.0f);
+			float x = glm::min(ballTransform[3][0], 8.0f);
+			x = glm::max(-8.0f, x);
+			return glm::vec3(x, y, ballTransform[3][2]);
 		}
 
 		void moveKI(veEvent event) {
@@ -712,7 +718,7 @@ namespace ve {
 			if (impactPosition.x < 0)
 				rotSpeedKeeper *= -1;
 			if (impactPosition.y < 2.5)
-				rotSpeedKeeper *= 1.5;
+				rotSpeedKeeper *= 2.5;
 			glm::vec3 keeperForce = glm::normalize(impactPosition - keeperPosition);
 			glm::vec3 keeperMomentum = keeperForce * event.dt * keeperSpeed;
 			//only move on goal line
@@ -991,6 +997,12 @@ namespace ve {
 			bool hit_topBar = vpe::collision(ball, topBar, mtv);
 			bool hit_keeper = vpe::collision(ball, keeper, mtv);
 			bool hit_any = hit_plane || hit_leftBar || hit_rightBar || hit_topBar || hit_keeper;
+
+			if (glm::distance(glm::vec3(0.0f, 1.1f, 21.0f), positionBall) > 90) {
+				g_tries++;
+				respawn();
+				return;
+			}
 
 			if (hit_keeper) {
 				vpe::contacts(ball, keeper, mtv, contacts);
