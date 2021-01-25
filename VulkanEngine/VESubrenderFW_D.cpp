@@ -38,7 +38,7 @@ namespace ve {
 			{ "media/shader/Forward/D/vert.spv", "media/shader/Forward/D/frag.spv" },
 			getRendererForwardPointer()->getSwapChainExtent(),
 			m_pipelineLayout, getRendererForwardPointer()->getRenderPass(),
-			{ VK_DYNAMIC_STATE_BLEND_CONSTANTS, VK_DYNAMIC_STATE_VIEWPORT },
+			{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_BLEND_CONSTANTS  },
 			&m_pipelines[0]);
 
 		if (m_maps.empty()) m_maps.resize(1);
