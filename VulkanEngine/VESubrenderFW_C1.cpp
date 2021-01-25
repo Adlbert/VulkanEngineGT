@@ -24,14 +24,14 @@ namespace ve {
 
 		vh::vhPipeCreateGraphicsPipelineLayout(getRendererForwardPointer()->getDevice(),
 		{ perObjectLayout2, perObjectLayout2,  getRendererForwardPointer()->getDescriptorSetLayoutShadow(), perObjectLayout2 },
-		{},&m_pipelineLayout);
+		{ },&m_pipelineLayout);
 
 		m_pipelines.resize(1);
 		vh::vhPipeCreateGraphicsPipeline(getRendererForwardPointer()->getDevice(),
 		{ "media/shader/Forward/C1/vert.spv", "media/shader/Forward/C1/frag.spv" },
 			getRendererForwardPointer()->getSwapChainExtent(),
 			m_pipelineLayout, getRendererForwardPointer()->getRenderPass(),
-			{ },
+			{ VK_DYNAMIC_STATE_VIEWPORT },
 			&m_pipelines[0]);
 
 	}

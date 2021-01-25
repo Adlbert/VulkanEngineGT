@@ -23,11 +23,11 @@ namespace vh {
 	*
 	*/
 
-	VkResult vhRenderCreateRenderPass(  VkDevice device,
-									VkFormat swapChainImageFormat, 
-									VkFormat depthFormat, 
-									VkAttachmentLoadOp loadOp,
-									VkRenderPass *renderPass) {
+	VkResult vhRenderCreateRenderPass(VkDevice device,
+		VkFormat swapChainImageFormat,
+		VkFormat depthFormat,
+		VkAttachmentLoadOp loadOp,
+		VkRenderPass* renderPass) {
 
 		VkAttachmentDescription colorAttachment = {};
 		colorAttachment.format = swapChainImageFormat;
@@ -36,7 +36,7 @@ namespace vh {
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		
+
 		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		if (loadOp == VK_ATTACHMENT_LOAD_OP_LOAD) {
 			colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -46,8 +46,8 @@ namespace vh {
 		VkAttachmentDescription depthAttachment = {};
 		depthAttachment.format = depthFormat;
 		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		depthAttachment.loadOp = loadOp; 
-		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; 
+		depthAttachment.loadOp = loadOp;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
@@ -104,7 +104,7 @@ namespace vh {
 	* \returns VK_SUCCESS or a Vulkan error code
 	*
 	*/
-	VkResult vhRenderCreateRenderPassShadow(VkDevice device, VkFormat depthFormat, VkRenderPass *renderPass) {
+	VkResult vhRenderCreateRenderPassShadow(VkDevice device, VkFormat depthFormat, VkRenderPass* renderPass) {
 
 		VkAttachmentDescription attachmentDescription{};
 		attachmentDescription.format = depthFormat;
@@ -169,14 +169,14 @@ namespace vh {
 	* \returns VK_SUCCESS or a Vulkan error code
 	*
 	*/
-	VkResult vhRenderCreateDescriptorSetLayout(	VkDevice device,
-											std::vector<uint32_t> counts,
-											std::vector<VkDescriptorType> types, 
-											std::vector<VkShaderStageFlags> stageFlags,
-											VkDescriptorSetLayout * descriptorSetLayout) {
-		
+	VkResult vhRenderCreateDescriptorSetLayout(VkDevice device,
+		std::vector<uint32_t> counts,
+		std::vector<VkDescriptorType> types,
+		std::vector<VkShaderStageFlags> stageFlags,
+		VkDescriptorSetLayout* descriptorSetLayout) {
+
 		std::vector<VkDescriptorSetLayoutBinding> bindings;
-		bindings.resize( types.size() );
+		bindings.resize(types.size());
 
 		for (uint32_t i = 0; i < types.size(); i++) {
 			bindings[i].binding = i;
@@ -205,12 +205,12 @@ namespace vh {
 	* \returns VK_SUCCESS or a Vulkan error code
 	*
 	*/
-	VkResult vhRenderCreateDescriptorPool(	VkDevice device,
-										std::vector<VkDescriptorType> types,
-										std::vector<uint32_t> numberDesc, 
-										VkDescriptorPool * descriptorPool) {
+	VkResult vhRenderCreateDescriptorPool(VkDevice device,
+		std::vector<VkDescriptorType> types,
+		std::vector<uint32_t> numberDesc,
+		VkDescriptorPool* descriptorPool) {
 		std::vector<VkDescriptorPoolSize> poolSizes = {};
-		poolSizes.resize( types.size() );
+		poolSizes.resize(types.size());
 
 		for (uint32_t i = 0; i < types.size(); i++) {
 			poolSizes[i].type = types[i];
@@ -239,11 +239,11 @@ namespace vh {
 	* \returns VK_SUCCESS or a Vulkan error code
 	*
 	*/
-	VkResult vhRenderCreateDescriptorSets(	VkDevice device, 
-											uint32_t numberDesc,
-											VkDescriptorSetLayout descriptorSetLayout, 	
-											VkDescriptorPool descriptorPool, 
-											std::vector<VkDescriptorSet> & descriptorSets) {
+	VkResult vhRenderCreateDescriptorSets(VkDevice device,
+		uint32_t numberDesc,
+		VkDescriptorSetLayout descriptorSetLayout,
+		VkDescriptorPool descriptorPool,
+		std::vector<VkDescriptorSet>& descriptorSets) {
 
 		std::vector<VkDescriptorSetLayout> layouts(numberDesc, descriptorSetLayout);
 		VkDescriptorSetAllocateInfo allocInfo = {};
@@ -256,7 +256,7 @@ namespace vh {
 		descriptorSets.resize(size + numberDesc);										//resize so we can append new sets to the vector
 		return vkAllocateDescriptorSets(device, &allocInfo, &descriptorSets[size]);
 	}
-	
+
 
 	/**
 	*
@@ -274,12 +274,12 @@ namespace vh {
 	* \returns VK_SUCCESS or a Vulkan error code
 	*
 	*/
-	VkResult vhRenderUpdateDescriptorSet(	VkDevice device,
-											VkDescriptorSet descriptorSet,
-											std::vector<VkBuffer> uniformBuffers,
-											std::vector<uint32_t> bufferRanges,
-											std::vector<std::vector<VkImageView>> textureImageViews,
-											std::vector<std::vector<VkSampler>> textureSamplers) {
+	VkResult vhRenderUpdateDescriptorSet(VkDevice device,
+		VkDescriptorSet descriptorSet,
+		std::vector<VkBuffer> uniformBuffers,
+		std::vector<uint32_t> bufferRanges,
+		std::vector<std::vector<VkImageView>> textureImageViews,
+		std::vector<std::vector<VkSampler>> textureSamplers) {
 
 		std::vector<VkDescriptorType> descriptorTypes = {};
 
@@ -290,12 +290,12 @@ namespace vh {
 				descriptorTypes.push_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 		}
 
-		return vhRenderUpdateDescriptorSet(	device, descriptorSet, 
-											descriptorTypes,
-											uniformBuffers,
-											bufferRanges,
-											textureImageViews,
-											textureSamplers);
+		return vhRenderUpdateDescriptorSet(device, descriptorSet,
+			descriptorTypes,
+			uniformBuffers,
+			bufferRanges,
+			textureImageViews,
+			textureSamplers);
 	}
 
 
@@ -308,7 +308,7 @@ namespace vh {
 	*
 	* \param[in] device Logical Vulkan device
 	* \param[in] descriptorSet The descriptor set to be updated
-	* \param[in] descriptorTypes A list with the descriptor types 
+	* \param[in] descriptorTypes A list with the descriptor types
 	* \param[in] uniformBuffers List of UBOs (can contain null handles)
 	* \param[in] bufferRanges List of buffer sizes
 	* \param[in] textureImageViews List of texture image views to be updated
@@ -317,17 +317,17 @@ namespace vh {
 	*
 	*/
 
-	VkResult vhRenderUpdateDescriptorSet(	VkDevice device,
-											VkDescriptorSet descriptorSet,
-											std::vector<VkDescriptorType> descriptorTypes,
-											std::vector<VkBuffer> uniformBuffers,
-											std::vector<uint32_t> bufferRanges,
-											std::vector<std::vector<VkImageView>> textureImageViews,
-											std::vector<std::vector<VkSampler>> textureSamplers) {
+	VkResult vhRenderUpdateDescriptorSet(VkDevice device,
+		VkDescriptorSet descriptorSet,
+		std::vector<VkDescriptorType> descriptorTypes,
+		std::vector<VkBuffer> uniformBuffers,
+		std::vector<uint32_t> bufferRanges,
+		std::vector<std::vector<VkImageView>> textureImageViews,
+		std::vector<std::vector<VkSampler>> textureSamplers) {
 
 		std::vector<VkWriteDescriptorSet> descriptorWrites = {};
 		descriptorWrites.resize(uniformBuffers.size());
-		
+
 		std::vector<VkDescriptorBufferInfo> bufferInfos = {};
 		bufferInfos.resize(uniformBuffers.size());
 
@@ -347,9 +347,9 @@ namespace vh {
 				bufferInfos[i].offset = 0;
 				bufferInfos[i].range = bufferRanges[i];
 				descriptorWrites[i].descriptorType = descriptorTypes[i], //VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				descriptorWrites[i].pBufferInfo = &bufferInfos[i];
+					descriptorWrites[i].pBufferInfo = &bufferInfos[i];
 			}
-			else if ( textureImageViews[i].size()>0 ) {
+			else if (textureImageViews[i].size() > 0) {
 				for (uint32_t j = 0; j < textureImageViews[i].size(); j++) {
 					VkDescriptorImageInfo imageInfo;
 
@@ -359,9 +359,9 @@ namespace vh {
 
 					imageInfos[i].push_back(imageInfo);
 				}
-				
+
 				descriptorWrites[i].descriptorType = descriptorTypes[i], //VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-				descriptorWrites[i].pImageInfo = imageInfos[i].data();
+					descriptorWrites[i].pImageInfo = imageInfos[i].data();
 				descriptorWrites[i].descriptorCount = (uint32_t)textureImageViews[i].size();
 			}
 			else {
@@ -391,12 +391,12 @@ namespace vh {
 	*
 	*/
 
-	VkResult vhRenderUpdateDescriptorSetMaps(	VkDevice device,
-												VkDescriptorSet descriptorSet,
-												uint32_t binding,
-												uint32_t offset,
-												uint32_t descriptorCount,
-												std::vector<std::vector<VkDescriptorImageInfo>> &maps) {
+	VkResult vhRenderUpdateDescriptorSetMaps(VkDevice device,
+		VkDescriptorSet descriptorSet,
+		uint32_t binding,
+		uint32_t offset,
+		uint32_t descriptorCount,
+		std::vector<std::vector<VkDescriptorImageInfo>>& maps) {
 
 		std::vector<VkWriteDescriptorSet> descriptorWrites = {};
 		descriptorWrites.resize(maps.size());
@@ -430,10 +430,10 @@ namespace vh {
 	*
 	*/
 	VkResult vhRenderBeginRenderPass(VkCommandBuffer commandBuffer,
-								 VkRenderPass renderPass, 
-								 VkFramebuffer frameBuffer, 
-								 VkExtent2D extent,
-								 VkSubpassContents subPassContents ) {
+		VkRenderPass renderPass,
+		VkFramebuffer frameBuffer,
+		VkExtent2D extent,
+		VkSubpassContents subPassContents) {
 
 		std::vector<VkClearValue> clearValues = {};
 		VkClearValue cv1, cv2;
@@ -454,18 +454,18 @@ namespace vh {
 	* \param[in] commandBuffer The command buffer to record into
 	* \param[in] renderPass The render pass that should be begun
 	* \param[in] frameBuffer The framebuffer for the render pass
-	* \param[in] clearValues A list of clear values to clear render targets 
+	* \param[in] clearValues A list of clear values to clear render targets
 	* \param[in] extent Extent of the framebuffer images
 	* \param[in] subPassContents Specifies whether cmd buffers are inline or use secondary bufers
 	* \returns VK_SUCCESS or a Vulkan error code
 	*
 	*/
-	VkResult vhRenderBeginRenderPass(	VkCommandBuffer commandBuffer,
-									VkRenderPass renderPass,
-									VkFramebuffer frameBuffer,
-									std::vector<VkClearValue> &clearValues,
-									VkExtent2D extent,
-									VkSubpassContents subPassContents) {
+	VkResult vhRenderBeginRenderPass(VkCommandBuffer commandBuffer,
+		VkRenderPass renderPass,
+		VkFramebuffer frameBuffer,
+		std::vector<VkClearValue>& clearValues,
+		VkExtent2D extent,
+		VkSubpassContents subPassContents) {
 
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -475,7 +475,7 @@ namespace vh {
 		renderPassInfo.renderArea.extent = extent;
 
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-		if(clearValues.size()>0)
+		if (clearValues.size() > 0)
 			renderPassInfo.pClearValues = clearValues.data();
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, subPassContents);
@@ -496,8 +496,8 @@ namespace vh {
 	* \returns VK_SUCCESS or a Vulkan error code
 	*
 	*/
-	VkResult vhRenderPresentResult(	VkQueue presentQueue, VkSwapchainKHR swapChain,
-									uint32_t imageIndex, VkSemaphore signalSemaphore ) {
+	VkResult vhRenderPresentResult(VkQueue presentQueue, VkSwapchainKHR swapChain,
+		uint32_t imageIndex, VkSemaphore signalSemaphore) {
 		VkPresentInfoKHR presentInfo = {};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -552,10 +552,10 @@ namespace vh {
 	* \returns VK_SUCCESS or a Vulkan error code
 	*
 	*/
-	VkResult vhPipeCreateGraphicsPipelineLayout(VkDevice device, 
-												std::vector<VkDescriptorSetLayout> descriptorSetLayouts, 
-												std::vector<VkPushConstantRange>   pushConstantRanges, 
-												VkPipelineLayout *pipelineLayout) {
+	VkResult vhPipeCreateGraphicsPipelineLayout(VkDevice device,
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts,
+		std::vector<VkPushConstantRange>   pushConstantRanges,
+		VkPipelineLayout* pipelineLayout) {
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
@@ -584,15 +584,15 @@ namespace vh {
 	* \returns VK_SUCCESS or a Vulkan error code
 	*
 	*/
-	VkResult vhPipeCreateGraphicsPipeline(	VkDevice device,
-											std::vector<std::string> shaderFileNames, 
-											VkExtent2D swapChainExtent,
-											VkPipelineLayout pipelineLayout,
-											VkRenderPass renderPass,
-											std::vector<VkDynamicState> dynamicStates,
-											VkPipeline *graphicsPipeline) {
+	VkResult vhPipeCreateGraphicsPipeline(VkDevice device,
+		std::vector<std::string> shaderFileNames,
+		VkExtent2D swapChainExtent,
+		VkPipelineLayout pipelineLayout,
+		VkRenderPass renderPass,
+		std::vector<VkDynamicState> dynamicStates,
+		VkPipeline* graphicsPipeline) {
 
-		std::vector<VkPipelineShaderStageCreateInfo> shaderStages; 
+		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
 		auto vertShaderCode = vhFileRead(shaderFileNames[0]);
 
@@ -607,7 +607,7 @@ namespace vh {
 		shaderStages.push_back(vertShaderStageInfo);
 
 		VkShaderModule fragShaderModule = VK_NULL_HANDLE;
-		if (shaderFileNames.size()>1 && shaderFileNames[1].size()>0) {
+		if (shaderFileNames.size() > 1 && shaderFileNames[1].size() > 0) {
 			auto fragShaderCode = vhFileRead(shaderFileNames[1]);
 
 			fragShaderModule = vhPipeCreateShaderModule(device, fragShaderCode);
@@ -637,6 +637,7 @@ namespace vh {
 		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		inputAssembly.primitiveRestartEnable = VK_FALSE;
 
+
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
@@ -645,14 +646,24 @@ namespace vh {
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
+		VkViewport viewport_small = {};
+		viewport_small.x = 20.0f;
+		viewport_small.y = 20.0f;
+		viewport_small.width = (float)swapChainExtent.width / 5;
+		viewport_small.height = (float)swapChainExtent.height / 5;
+		viewport_small.minDepth = 0.0f;
+		viewport_small.maxDepth = 1.0f;
+
+		VkViewport viewports[] = { viewport, viewport_small };
+
 		VkRect2D scissor = {};
 		scissor.offset = { 0, 0 };
 		scissor.extent = swapChainExtent;
 
 		VkPipelineViewportStateCreateInfo viewportState = {};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportState.viewportCount = 1;
-		viewportState.pViewports = &viewport;
+		viewportState.viewportCount = 2;
+		viewportState.pViewports = viewports;
 		viewportState.scissorCount = 1;
 		viewportState.pScissors = &scissor;
 
@@ -723,9 +734,9 @@ namespace vh {
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-		VHCHECKRESULT( vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, graphicsPipeline) );
+		VHCHECKRESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, graphicsPipeline));
 
-		if(fragShaderModule != VK_NULL_HANDLE )
+		if (fragShaderModule != VK_NULL_HANDLE)
 			vkDestroyShaderModule(device, fragShaderModule, nullptr);
 
 		vkDestroyShaderModule(device, vertShaderModule, nullptr);
@@ -749,11 +760,11 @@ namespace vh {
 	*
 	*/
 	VkResult vhPipeCreateGraphicsShadowPipeline(VkDevice device,
-												std::string verShaderFilename,
-												VkExtent2D shadowMapExtent,
-												VkPipelineLayout pipelineLayout,
-												VkRenderPass renderPass,
-												VkPipeline *graphicsPipeline) {
+		std::string verShaderFilename,
+		VkExtent2D shadowMapExtent,
+		VkPipelineLayout pipelineLayout,
+		VkRenderPass renderPass,
+		VkPipeline* graphicsPipeline) {
 
 		auto vertShaderCode = vhFileRead(verShaderFilename);
 
@@ -791,14 +802,25 @@ namespace vh {
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
+
+		VkViewport viewport_small = {};
+		viewport_small.x = 0.0f;
+		viewport_small.y = 0.0f;
+		viewport_small.width = (float)shadowMapExtent.width / 5;
+		viewport_small.height = (float)shadowMapExtent.height / 5;
+		viewport_small.minDepth = 0.0f;
+		viewport_small.maxDepth = 1.0f;
+
+		VkViewport viewports[] = { viewport };
+
 		VkRect2D scissor = {};
 		scissor.offset = { 0, 0 };
 		scissor.extent = shadowMapExtent;
 
 		VkPipelineViewportStateCreateInfo viewportState = {};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportState.viewportCount = 1;
-		viewportState.pViewports = &viewport;
+		viewportState.viewportCount = 2;
+		viewportState.pViewports = viewports;
 		viewportState.scissorCount = 1;
 		viewportState.pScissors = &scissor;
 
@@ -840,6 +862,12 @@ namespace vh {
 		colorBlending.blendConstants[2] = 0.0f;
 		colorBlending.blendConstants[3] = 0.0f;
 
+		//VkDynamicState dynamicState = {};
+		//dynamicState = VK_DYNAMIC_STATE_VIEWPORT; // VK_DYNAMIC_STATE_SCISSOR
+		//VkPipelineDynamicStateCreateInfo pipelineDynamicStateInfo{};
+		//pipelineDynamicStateInfo.pDynamicStates = &dynamicState;
+		//pipelineDynamicStateInfo.dynamicStateCount = 1;
+
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.stageCount = 1;
@@ -851,12 +879,13 @@ namespace vh {
 		pipelineInfo.pMultisampleState = &multisampling;
 		pipelineInfo.pDepthStencilState = &depthStencil;
 		pipelineInfo.pColorBlendState = &colorBlending;
+		//pipelineInfo.pDynamicState = &pipelineDynamicStateInfo;
 		pipelineInfo.layout = pipelineLayout;
 		pipelineInfo.renderPass = renderPass;
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-		VHCHECKRESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, graphicsPipeline ) );
+		VHCHECKRESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, graphicsPipeline));
 
 		vkDestroyShaderModule(device, vertShaderModule, nullptr);
 		return VK_SUCCESS;

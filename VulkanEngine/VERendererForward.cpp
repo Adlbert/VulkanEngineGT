@@ -489,17 +489,34 @@ namespace ve {
 
 		vh::vhCmdBeginCommandBuffer(m_device, m_commandBuffers[m_imageIndex], (VkCommandBufferUsageFlagBits)0);
 
+
 		uint32_t bufferIdx = 0;
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		if (m_imageIndex%2==0) {
+			viewport.width = (float)getWindowPointer()->getExtent().width / 5;
+			viewport.height = (float)getWindowPointer()->getExtent().height / 5;
+		}
+		else {
+			viewport.width = (float)getWindowPointer()->getExtent().width;
+			viewport.height = (float)getWindowPointer()->getExtent().height;
+		}
 		for (uint32_t i = 0; i < getSceneManagerPointer()->getLights().size(); i++) {
+
 
 			VELight * pLight = getSceneManagerPointer()->getLights()[i];
 
 			for (uint32_t j = 0; j < pLight->m_shadowCameras.size(); j++) {
 				vh::vhRenderBeginRenderPass(m_commandBuffers[m_imageIndex], m_renderPassShadow, m_shadowFramebuffers[m_imageIndex][j], clearValuesShadow, m_shadowMaps[0][j]->m_extent, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+				vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewport);
 				vkCmdExecuteCommands(m_commandBuffers[m_imageIndex], 1, &m_secondaryBuffers[m_imageIndex][bufferIdx++].buffer);
 				vkCmdEndRenderPass(m_commandBuffers[m_imageIndex]);
 			}
 			vh::vhRenderBeginRenderPass(m_commandBuffers[m_imageIndex], i == 0 ? m_renderPassClear : m_renderPassLoad, m_swapChainFramebuffers[m_imageIndex], clearValuesLight, m_swapChainExtent, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+			vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewport);
 			vkCmdExecuteCommands(m_commandBuffers[m_imageIndex], 1, &m_secondaryBuffers[m_imageIndex][bufferIdx++].buffer);
 			vkCmdEndRenderPass(m_commandBuffers[m_imageIndex]);
 
@@ -647,6 +664,8 @@ namespace ve {
 		clearValuesLight.push_back(cv2);
 
 
+
+
 		//-----------------------------------------------------------------------------------------
 		//create a new primary command buffer and record all secondary buffers into it
 
@@ -657,11 +676,13 @@ namespace ve {
 		uint32_t bufferIdx = 0;
 		for (uint32_t i = 0; i < getSceneManagerPointer()->getLights().size(); i++) {
 
+
 			VELight * pLight = getSceneManagerPointer()->getLights()[i];
 			secondaryBufferLists_t &lightList = m_lightBufferLists[pLight].lightLists[m_imageIndex];
 
 			for (uint32_t j = 0; j < pLight->m_shadowCameras.size(); j++) {
 				vh::vhRenderBeginRenderPass(m_commandBuffers[m_imageIndex], m_renderPassShadow, m_shadowFramebuffers[m_imageIndex][j], clearValuesShadow, m_shadowMaps[0][j]->m_extent, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+				//vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewport);
 				for (auto secBuf : lightList.shadowBuffers) {
 					vkCmdExecuteCommands(m_commandBuffers[m_imageIndex], 1, &secBuf.buffer);
 				}
@@ -669,6 +690,7 @@ namespace ve {
 			}
 
 			vh::vhRenderBeginRenderPass(m_commandBuffers[m_imageIndex], i == 0 ? m_renderPassClear : m_renderPassLoad, m_swapChainFramebuffers[m_imageIndex], clearValuesLight, m_swapChainExtent, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+			//vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewport);
 			for (auto secBuf : lightList.lightBuffers) {
 				vkCmdExecuteCommands(m_commandBuffers[m_imageIndex], 1, &secBuf.buffer);
 			}
