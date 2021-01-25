@@ -603,7 +603,6 @@ namespace ve {
 		//camera parent is used for translations
 		VESceneNode *cameraParent = getSceneManagerPointer()->createSceneNode(	"StandardCameraParent", getRoot(), 
 																				glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 5.0f, 0.0f)));
-
 		//camera can only do yaw (parent y-axis) and pitch (local x-axis) rotations
 		VkExtent2D extent = getWindowPointer()->getExtent();
 		VECameraProjective *camera = (VECameraProjective *)getSceneManagerPointer()->createCamera("StandardCamera", VECamera::VE_CAMERA_TYPE_PROJECTIVE, cameraParent);
