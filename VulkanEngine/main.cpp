@@ -692,7 +692,7 @@ namespace ve {
 		glm::vec3 calclualteBallImpact(veEvent event) {
 			VESceneNode* ballParent = getSceneManagerPointer()->getSceneNode("The Ball Parent");
 			glm::mat4 ballTransform = ballParent->getTransform();
-			int maxLoops = 10;
+			int maxLoops = 100;
 			int loops = 0;
 			glm::vec3 momentum = glm::vec3();
 			while (ballTransform[3][2] < 75 && loops < maxLoops) {
