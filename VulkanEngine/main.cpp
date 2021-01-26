@@ -344,17 +344,17 @@ namespace ve {
 		void resolveContacts(std::set<vpe::contact> contacts) {
 			std::set<vpe::contact>::iterator itr;
 			glm::vec3 f_hat = glm::vec3(0.0f);
-			std::cout << glm::to_string(getSceneManagerPointer()->getSceneNode("The Ball Parent")->getPosition()) << std::endl;
+			//std::cout << glm::to_string(getSceneManagerPointer()->getSceneNode("The Ball Parent")->getPosition()) << std::endl;
 			getSceneManagerPointer()->getSceneNode("The Ball Parent")->multiplyTransform(glm::translate(glm::mat4(1.0f), linearMomentum * -20));
-			std::cout << glm::to_string(getSceneManagerPointer()->getSceneNode("The Ball Parent")->getPosition()) << std::endl;
+			//std::cout << glm::to_string(getSceneManagerPointer()->getSceneNode("The Ball Parent")->getPosition()) << std::endl;
 			float e = 0.4f;
 			float dF = 0.2;
 			int used_contacts = 0;
 
-			std::cout << "force" << glm::to_string(force) << std::endl;
-			std::cout << "linearMomentum" << glm::to_string(linearMomentum) << std::endl;
-			std::cout << "angularMomentum" << glm::to_string(angularMomentum) << std::endl;
-			std::cout << "::::::::::::::::::" << std::endl;
+			//std::cout << "force" << glm::to_string(force) << std::endl;
+			//std::cout << "linearMomentum" << glm::to_string(linearMomentum) << std::endl;
+			//std::cout << "angularMomentum" << glm::to_string(angularMomentum) << std::endl;
+			//std::cout << "::::::::::::::::::" << std::endl;
 
 			for (itr = contacts.begin(); itr != contacts.end(); itr++) {
 				////assume postion as center
@@ -390,9 +390,9 @@ namespace ve {
 			f_hat /= 1000;
 			contact_count++;
 			linearMomentum += f_hat;
-			std::cout << "angularVelocity" << glm::to_string(angularMomentum) << std::endl;
-			std::cout << "force" << glm::to_string(force) << std::endl;
-			std::cout << "__________________" << std::endl;
+			//std::cout << "angularVelocity" << glm::to_string(angularMomentum) << std::endl;
+			//std::cout << "force" << glm::to_string(force) << std::endl;
+			//std::cout << "__________________" << std::endl;
 		}
 
 		void checkCollision() {
@@ -443,21 +443,25 @@ namespace ve {
 
 			if (hit_keeper) {
 				vpe::contacts(ball, keeper, mtv, contacts);
+				g_tries++;
 				std::cout << "hit_keeper" << contacts.size() << std::endl;
 				respawn();
 			}
 			if (hit_leftBar) {
 				vpe::contacts(ball, leftBar, mtv, contacts);
+				g_tries++;
 				std::cout << "hit_leftBar" << contacts.size() << std::endl;
 				respawn();
 			}
 			if (hit_rightBar) {
 				vpe::contacts(ball, rightBar, mtv, contacts);
+				g_tries++;
 				std::cout << "hit_rightBar" << contacts.size() << std::endl;
 				respawn();
 			}
 			if (hit_topBar) {
 				vpe::contacts(ball, topBar, mtv, contacts);
+				g_tries++;
 				std::cout << "hit_topBar" << contacts.size() << std::endl;
 				respawn();
 			}
@@ -469,8 +473,8 @@ namespace ve {
 				g_tries++;
 				g_score++;
 				std::cout << "hit_goal" << std::endl;
-				std::cout << glm::to_string(positionBall) << std::endl;
-				std::cout << glm::to_string(impactPosition) << std::endl;
+				//std::cout << glm::to_string(positionBall) << std::endl;
+				//std::cout << glm::to_string(impactPosition) << std::endl;
 				return;
 			}
 		}
