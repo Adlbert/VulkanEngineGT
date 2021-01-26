@@ -583,8 +583,8 @@ namespace ve {
 		virtual void registerEventListeners() {
 			VEEngine::registerEventListeners();
 
-			registerEventListener(new EventListenerKeyboard("Ball"), { veEvent::VE_EVENT_FRAME_STARTED, veEvent::VE_EVENT_KEYBOARD });
-			registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY });
+			//registerEventListener(new EventListenerKeyboard("Ball"), { veEvent::VE_EVENT_FRAME_STARTED, veEvent::VE_EVENT_KEYBOARD });
+			//registerEventListener(new EventListenerGUI("GUI"), { veEvent::VE_EVENT_DRAW_OVERLAY });
 		};
 
 
@@ -603,13 +603,13 @@ namespace ve {
 			//	{ "bluecloud_ft.jpg", "bluecloud_bk.jpg", "bluecloud_up.jpg",
 			//		"bluecloud_dn.jpg", "bluecloud_rt.jpg", "bluecloud_lf.jpg" }, pScene));
 
-			VESceneNode* e4;
-			VECHECKPOINTER(e4 = getSceneManagerPointer()->loadModel("The Plane", "media/models/test", "plane_t_n_s.obj", 0, pScene));
-			e4->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f, 1.0f, 1000.0f)));
+			//VESceneNode* e4;
+			//VECHECKPOINTER(e4 = getSceneManagerPointer()->loadModel("The Plane", "media/models/test", "plane_t_n_s.obj", 0, pScene));
+			//e4->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f, 1.0f, 1000.0f)));
 
-			VEEntity* pE4;
-			VECHECKPOINTER(pE4 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Plane/plane_t_n_s.obj/plane/Entity_0"));
-			pE4->setParam(glm::vec4(1000.0f, 1000.0f, 0.0f, 0.0f));
+			//VEEntity* pE4;
+			//VECHECKPOINTER(pE4 = (VEEntity*)getSceneManagerPointer()->getSceneNode("The Plane/plane_t_n_s.obj/plane/Entity_0"));
+			//pE4->setParam(glm::vec4(1000.0f, 1000.0f, 0.0f, 0.0f));
 
 			VESceneNode* b1, * b1Parent;
 			b1Parent = getSceneManagerPointer()->createSceneNode("The Ball Parent", pScene, glm::mat4(1.0));
@@ -618,23 +618,23 @@ namespace ve {
 			b1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.1f, 21.0f)));
 			b1Parent->addChild(b1);
 
-			VESceneNode* g1, * g1Parent;
-			g1Parent = getSceneManagerPointer()->createSceneNode("The Goal Parent", pScene, glm::mat4(1.0));
-			VECHECKPOINTER(g1 = getSceneManagerPointer()->loadModel("The Goal", "media/models/game/", "goal.obj"));
-			g1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.03f, 0.03f, 0.03f)));
+			//VESceneNode* g1, * g1Parent;
+			//g1Parent = getSceneManagerPointer()->createSceneNode("The Goal Parent", pScene, glm::mat4(1.0));
+			//VECHECKPOINTER(g1 = getSceneManagerPointer()->loadModel("The Goal", "media/models/game/", "goal.obj"));
+			//g1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.03f, 0.03f, 0.03f)));
 			//goal seems to be 15 width
 			//goal seems to be 5 height
-			g1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-7.5f, 0.55f, 75.0f)));
-			g1Parent->addChild(g1);
+			//g1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(-7.5f, 0.55f, 75.0f)));
+			//g1Parent->addChild(g1);
 
-			VESceneNode* k1, * k1Parent;
-			k1Parent = getSceneManagerPointer()->createSceneNode("The Keeper Parent", pScene, glm::mat4(1.0));
-			VECHECKPOINTER(k1 = getSceneManagerPointer()->loadModel("The Keeper", "media/models/test/", "cube1.obj"));
-			k1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(2, 4, 1)));
+			//VESceneNode* k1, * k1Parent;
+			//k1Parent = getSceneManagerPointer()->createSceneNode("The Keeper Parent", pScene, glm::mat4(1.0));
+			//VECHECKPOINTER(k1 = getSceneManagerPointer()->loadModel("The Keeper", "media/models/test/", "cube1.obj"));
+			//k1->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(2, 4, 1)));
 			//goal seems to be 15 width
 			//goal seems to be 5 height
-			k1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 3.0f, 70.0f)));
-			k1Parent->addChild(k1);
+			//k1Parent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 3.0f, 70.0f)));
+			//k1Parent->addChild(k1);
 
 			VEEngine::loadLevel(numLevel);			//create standard cameras and lights
 

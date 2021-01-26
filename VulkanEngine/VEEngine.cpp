@@ -18,16 +18,16 @@ using namespace vh;
 namespace ve {
 	class VEWindow;
 
-	VEEngine * g_pVEEngineSingleton = nullptr;	///<Singleton pointer to the only VEEngine instance
+	VEEngine* g_pVEEngineSingleton = nullptr;	///<Singleton pointer to the only VEEngine instance
 
 	/**
 	* \brief Constructor of my VEEngine
 	* \param[in] debug Switch debuggin on or off
-	*/ 
+	*/
 	VEEngine::VEEngine(bool debug) : m_debug(debug) {
-		g_pVEEngineSingleton = this; 
+		g_pVEEngineSingleton = this;
 
-		if (vhLoadVulkanLibrary() != VK_SUCCESS ) exit(-1);
+		if (vhLoadVulkanLibrary() != VK_SUCCESS) exit(-1);
 		if (vhLoadExportedEntryPoints() != VK_SUCCESS) exit(-1);
 		if (vhLoadGlobalLevelEntryPoints() != VK_SUCCESS) exit(-1);
 	}
@@ -53,10 +53,10 @@ namespace ve {
 		std::vector<const char*> validationLayers = getValidationLayers();
 		vh::vhDevCreateInstance(instanceExtensions, validationLayers, &m_instance);
 		if (vhLoadInstanceLevelEntryPoints(m_instance) != VK_SUCCESS) exit(-1);
-		
-		if( m_debug )
-			vh::vhSetupDebugCallback( m_instance, &callback );				//create a debug callback for printing debug information
-		
+
+		if (m_debug)
+			vh::vhSetupDebugCallback(m_instance, &callback);				//create a debug callback for printing debug information
+
 		m_pWindow->createSurface(m_instance, &m_pRenderer->m_surface);	//create a Vulkan surface
 		m_pRenderer->initRenderer();			//initialize the renderer
 		m_pSceneManager->initSceneManager();	//initialize the scene manager
@@ -71,7 +71,7 @@ namespace ve {
 	/**
 	* \brief Create the only VEWindow instance and store a pointer to it.
 	*
-	* VEWindow is a base class only and should not be created itself. Instead, a derived class should be 
+	* VEWindow is a base class only and should not be created itself. Instead, a derived class should be
 	* instanciated, being tailored to one specific windowing system.
 	*
 	*/
@@ -105,7 +105,7 @@ namespace ve {
 	*
 	*/
 	void VEEngine::registerEventListeners() {
-		registerEventListener( new VEEventListenerGLFW("StandardEventListener")); //register a standard listener
+		registerEventListener(new VEEventListenerGLFW("StandardEventListener")); //register a standard listener
 	}
 
 
@@ -127,7 +127,7 @@ namespace ve {
 		m_pRenderer->closeRenderer();
 		m_pWindow->closeWindow();
 
-		if( m_debug )
+		if (m_debug)
 			vhDebugDestroyReportCallbackEXT(m_instance, callback, nullptr);
 
 		vkDestroySurfaceKHR(m_instance, m_pRenderer->m_surface, nullptr);
@@ -154,7 +154,7 @@ namespace ve {
 
 	/**
 	* \returns a list of Vulkan API instance extensions that are required.
-	*/	
+	*/
 	std::vector<const char*> VEEngine::getRequiredInstanceExtensions() {
 		std::vector<const char*> extensions = m_pWindow->getRequiredInstanceExtensions();
 		if (m_debug) {
@@ -177,13 +177,13 @@ namespace ve {
 	* \param[in] pListener Pointer to the event listener to be registered.
 	*
 	*/
-	void VEEngine::registerEventListener(VEEventListener *pListener) {
+	void VEEngine::registerEventListener(VEEventListener* pListener) {
 		std::vector<veEvent::veEventType> eventTypes;
-		for (uint32_t i = veEvent::VE_EVENT_NONE+1; i < veEvent::VE_EVENT_LAST; i++) {
+		for (uint32_t i = veEvent::VE_EVENT_NONE + 1; i < veEvent::VE_EVENT_LAST; i++) {
 			eventTypes.push_back((veEvent::veEventType)i);
 		}
 		registerEventListener(pListener, eventTypes);
-	}; 
+	};
 
 
 	/**
@@ -196,7 +196,7 @@ namespace ve {
 	* \param[in] eventTypes List with event types that are sent to this listener
 	*
 	*/
-	void VEEngine::registerEventListener(VEEventListener *pListener, std::vector<veEvent::veEventType> eventTypes) {
+	void VEEngine::registerEventListener(VEEventListener* pListener, std::vector<veEvent::veEventType> eventTypes) {
 		for (auto eventType : eventTypes) {
 			m_eventListeners[eventType]->push_back(pListener);
 		}
@@ -213,7 +213,7 @@ namespace ve {
 	*/
 	VEEventListener* VEEngine::getEventListener(std::string name) {
 		for (auto list : m_eventListeners) {
-			for (auto listener : *(list.second) ) {
+			for (auto listener : *(list.second)) {
 				if (listener->getName() == name) {
 					return listener;
 				}
@@ -233,7 +233,7 @@ namespace ve {
 	* \param[in] list Reference to the list that this listener should be registered in
 	*
 	*/
-	void VEEngine::removeEventListener(std::string name, std::vector<VEEventListener*> *list) {
+	void VEEngine::removeEventListener(std::string name, std::vector<VEEventListener*>* list) {
 		for (uint32_t i = 0; i < list->size(); i++) {
 			if ((*list)[i]->getName() == name) {
 				(*list)[i] = (*list)[list->size() - 1];		//write over last listener
@@ -243,7 +243,7 @@ namespace ve {
 		}
 	}
 
-	
+
 	/**
 	*
 	* \brief Remove an event listener.
@@ -254,7 +254,7 @@ namespace ve {
 	*
 	*/
 	void VEEngine::removeEventListener(std::string name) {
-		for( auto list :  m_eventListeners) {
+		for (auto list : m_eventListeners) {
 			removeEventListener(name, list.second);
 		}
 	};
@@ -269,8 +269,8 @@ namespace ve {
 	* \param[in] name The name of the listener zu be destroyed
 	*
 	*/
-	void VEEngine::deleteEventListener(std::string name)  {
-		VEEventListener *pListener = getEventListener(name);
+	void VEEngine::deleteEventListener(std::string name) {
+		VEEventListener* pListener = getEventListener(name);
 		if (pListener != nullptr) {
 			removeEventListener(name);
 			delete pListener;
@@ -304,7 +304,7 @@ namespace ve {
 	* \param[in] event The event that should be passed to all listeners.
 	*
 	*/
-	void VEEngine::callListeners(double dt, veEvent event ) {
+	void VEEngine::callListeners(double dt, veEvent event) {
 		callListeners(dt, event, m_eventListeners[event.type]);
 	}
 
@@ -313,8 +313,8 @@ namespace ve {
 	*
 	* \brief Call all event listeners.
 	*
-	* This function calls all event listeners and gives them a specific event. The listeners can react to the 
-	* event or not. If one listener retursn true, then event is "consumed" by this listener, and the 
+	* This function calls all event listeners and gives them a specific event. The listeners can react to the
+	* event or not. If one listener retursn true, then event is "consumed" by this listener, and the
 	* function stops. Otherwise it continues and goes on calling listeners.
 	*
 	* \param[in] dt Delta time that passed by since the last loop.
@@ -322,28 +322,28 @@ namespace ve {
 	* \param[in] list The list of registered event listeners, that should receive this event
 	*
 	*/
-	void VEEngine::callListeners(double dt, veEvent event, std::vector<VEEventListener*> *list ) {
+	void VEEngine::callListeners(double dt, veEvent event, std::vector<VEEventListener*>* list) {
 		static std::vector<std::future<void>> futures;
 		event.dt = dt;
 
 		const uint32_t granularity = 200;
-		if ( m_threadPool->threadCount()>1 && list->size() > granularity) {
-			uint32_t numThreads =  std::min((int) (list->size()/ granularity), (int)m_threadPool->threadCount());
+		if (m_threadPool->threadCount() > 1 && list->size() > granularity) {
+			uint32_t numThreads = std::min((int)(list->size() / granularity), (int)m_threadPool->threadCount());
 			uint32_t numListenerPerThread = (uint32_t)list->size() / numThreads;
 			futures.resize(numThreads);
 
 			uint32_t startIdx, endIdx;
 			for (uint32_t k = 0; k < numThreads; k++) {
-				startIdx = k*numListenerPerThread;
-				endIdx = k == numThreads - 1 ? (uint32_t)list->size()-1 : (k+1)*numListenerPerThread-1;
+				startIdx = k * numListenerPerThread;
+				endIdx = k == numThreads - 1 ? (uint32_t)list->size() - 1 : (k + 1) * numListenerPerThread - 1;
 
-				auto future = m_threadPool->add(&VEEngine::callListeners2, this, dt, event, list, startIdx, endIdx );
+				auto future = m_threadPool->add(&VEEngine::callListeners2, this, dt, event, list, startIdx, endIdx);
 				futures[k] = std::move(future);
 			}
 			for (uint32_t i = 0; i < futures.size(); i++) futures[i].get();
 		}
 		else {
-			if(list->size()>0) callListeners2( dt, event, list, 0, (uint32_t) list->size() - 1);
+			if (list->size() > 0) callListeners2(dt, event, list, 0, (uint32_t)list->size() - 1);
 		}
 	}
 
@@ -358,8 +358,8 @@ namespace ve {
 	* \param[in] endIdx Index of the last listener to call
 	*
 	*/
-	void VEEngine::callListeners2( double dt, veEvent event, std::vector<VEEventListener*> *list, uint32_t startIdx, uint32_t endIdx) {
-		for( uint32_t i=startIdx; i<=endIdx; i++ ) {
+	void VEEngine::callListeners2(double dt, veEvent event, std::vector<VEEventListener*>* list, uint32_t startIdx, uint32_t endIdx) {
+		for (uint32_t i = startIdx; i <= endIdx; i++) {
 			if ((*list)[i]->onEvent(event)) return;		//if return true then the listener has consumed the event, so stop processing it
 		}
 	}
@@ -418,7 +418,7 @@ namespace ve {
 	* \param[in] dt The delta time that has passed since the last loop.
 	*
 	*/
-	void VEEngine::processEvents( double dt) {
+	void VEEngine::processEvents(double dt) {
 
 		std::vector<veEvent> keepEvents;							//Keep these events in the list
 		for (auto event : m_eventlist) {
@@ -428,7 +428,7 @@ namespace ve {
 		}
 
 		for (auto event : m_eventlist) {
-			if ( event.notBeforeTime <= m_loopCount) {
+			if (event.notBeforeTime <= m_loopCount) {
 				callListeners(dt, event);
 			}
 		}
@@ -441,7 +441,7 @@ namespace ve {
 	* \brief Inform the engine that the window size has been changed.
 	*
 	* If the window size has been changed, then the renderer has to change many resources like the swap chain size,
-	* framebuffers etc. 
+	* framebuffers etc.
 	*
 	*/
 	void VEEngine::windowSizeChanged() {
@@ -457,35 +457,35 @@ namespace ve {
 	* \returns the Vulkan instance.
 	*/
 	VkInstance VEEngine::getInstance() {
-		return m_instance; 
+		return m_instance;
 	}
-	
+
 	/**
 	* \returns the VEWindow instance.
 	*/
-	VEWindow * VEEngine::getWindow() {
-		return m_pWindow; 
+	VEWindow* VEEngine::getWindow() {
+		return m_pWindow;
 	}
-	
+
 	/**
 	* \returns the VESceneManager instance.
 	*/
-	VESceneManager * VEEngine::getSceneManager() {
-		return m_pSceneManager; 
+	VESceneManager* VEEngine::getSceneManager() {
+		return m_pSceneManager;
 	};
 
 	/**
 	* \returns the VERenderer instance.
 	*/
-	VERenderer  * VEEngine::getRenderer() {
-		return m_pRenderer; 
+	VERenderer* VEEngine::getRenderer() {
+		return m_pRenderer;
 	}
 
 	/**
 	* \returns the loop counter.
 	*/
 	uint32_t VEEngine::getLoopCount() {
-		return m_loopCount; 
+		return m_loopCount;
 	};
 
 
@@ -506,16 +506,16 @@ namespace ve {
 		std::chrono::high_resolution_clock::time_point t_prev = t_start;
 		std::chrono::high_resolution_clock::time_point t_now;
 
-		while ( !m_end_running) {
-			m_dt = vh::vhTimeDuration( t_prev );
-			m_AvgFrameTime = vh::vhAverage( (float)m_dt, m_AvgFrameTime );
+		while (!m_end_running) {
+			m_dt = vh::vhTimeDuration(t_prev);
+			m_AvgFrameTime = vh::vhAverage((float)m_dt, m_AvgFrameTime);
 			t_prev = vh::vhTimeNow();
 
 			//----------------------------------------------------------------------------------
 			//process frame begin
 
 			t_now = vh::vhTimeNow();
-			veEvent event(veEvent::VE_EVENT_FRAME_STARTED );	//notify all listeners that a new frame starts
+			veEvent event(veEvent::VE_EVENT_FRAME_STARTED);	//notify all listeners that a new frame starts
 			callListeners(m_dt, event);
 			m_AvgStartedTime = vh::vhAverage(vh::vhTimeDuration(t_now), m_AvgStartedTime);
 
@@ -529,7 +529,7 @@ namespace ve {
 				m_pRenderer->recreateSwapchain();
 				m_framebufferResized = false;
 			}
-			
+
 			t_now = vh::vhTimeNow();
 			processEvents(m_dt);				//process all current events, including pressed keys
 			m_AvgEventTime = vh::vhAverage(vh::vhTimeDuration(t_now), m_AvgEventTime);
@@ -538,7 +538,7 @@ namespace ve {
 			//update world matrices and send them to the GPU
 
 			t_now = vh::vhTimeNow();
-			getSceneManagerPointer()->updateSceneNodes( getRendererPointer()->getImageIndex());	//update scene node UBOs
+			getSceneManagerPointer()->updateSceneNodes(getRendererPointer()->getImageIndex());	//update scene node UBOs
 			m_AvgUpdateTime = vh::vhAverage(vh::vhTimeDuration(t_now), m_AvgUpdateTime);
 
 			//----------------------------------------------------------------------------------
@@ -593,19 +593,19 @@ namespace ve {
 	*
 	*/
 	void VEEngine::end() {
-		m_end_running = true; 
+		m_end_running = true;
 	}
 
 
 	///\brief load standard level with standard camera and lights
-	void VEEngine::loadLevel(uint32_t numLevel ) {
+	void VEEngine::loadLevel(uint32_t numLevel) {
 
 		//camera parent is used for translations
-		VESceneNode *cameraParent = getSceneManagerPointer()->createSceneNode(	"StandardCameraParent", getRoot(), 
-																				glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 5.0f, 0.0f)));
+		VESceneNode* cameraParent = getSceneManagerPointer()->createSceneNode("StandardCameraParent", getRoot(),
+			glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 5.0f, 0.0f)));
 		//camera can only do yaw (parent y-axis) and pitch (local x-axis) rotations
 		VkExtent2D extent = getWindowPointer()->getExtent();
-		VECameraProjective *camera = (VECameraProjective *)getSceneManagerPointer()->createCamera("StandardCamera", VECamera::VE_CAMERA_TYPE_PROJECTIVE, cameraParent);
+		VECameraProjective* camera = (VECameraProjective*)getSceneManagerPointer()->createCamera("StandardCamera", VECamera::VE_CAMERA_TYPE_PROJECTIVE, cameraParent);
 		camera->m_nearPlane = 0.1f;
 		camera->m_farPlane = 500.1f;
 		camera->m_aspectRatio = extent.width / (float)extent.height;
@@ -613,37 +613,35 @@ namespace ve {
 		camera->lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		getSceneManagerPointer()->setCamera(camera);
 
-		VELight* light4 = (VESpotLight*)getSceneManagerPointer()->createLight("StandardAmbientLight", VELight::VE_LIGHT_TYPE_AMBIENT, camera);
-		light4->m_col_ambient = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
-		VELight *light2 = (VESpotLight *)getSceneManagerPointer()->createLight("SmallAmbientLight", VELight::VE_LIGHT_TYPE_AMBIENT, camera);
-		light2->m_col_ambient = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 
-		//use one light source
-		VELight* light3 = (VEDirectionalLight*)getSceneManagerPointer()->createLight("StandardDirLight", VELight::VE_LIGHT_TYPE_DIRECTIONAL, getRoot());     //new VEDirectionalLight("StandardDirLight");
-		light3->lookAt(glm::vec3(0.0f, 20.0f, -20.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		light3->m_col_diffuse = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
-		light3->m_col_specular = glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
-		//use one light source
-		VELight *light1 = (VEDirectionalLight *)getSceneManagerPointer()->createLight("SmallDirLight", VELight::VE_LIGHT_TYPE_DIRECTIONAL, getRoot());     //new VEDirectionalLight("StandardDirLight");
-		light1->lookAt(glm::vec3(0.0f, 20.0f, -20.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		light1->m_col_diffuse = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
-		light1->m_col_specular = glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
 
-		
+
+		for (int i = 0; i < 16; i++) {
+			//use one light source
+			VELight* light3 = (VEDirectionalLight*)getSceneManagerPointer()->createLight("StandardDirLight" + std::to_string(i), VELight::VE_LIGHT_TYPE_DIRECTIONAL, getRoot());     //new VEDirectionalLight("StandardDirLight");
+			light3->lookAt(glm::vec3(0.0f, 20.0f, -20.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			light3->m_col_diffuse = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
+			light3->m_col_specular = glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
+
+			VELight* light4 = (VESpotLight*)getSceneManagerPointer()->createLight("StandardAmbientLight" + std::to_string(i), VELight::VE_LIGHT_TYPE_AMBIENT, camera);
+			light4->m_col_ambient = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
+		}
+
+
 		/*VELight *light3 = (VEPointLight *)getSceneManagerPointer()->createLight("StandardPointLight", VELight::VE_LIGHT_TYPE_POINT, camera); //new VEPointLight("StandardPointLight");		//sphere is attached to this!
 		light3->m_col_diffuse = glm::vec4(0.99f, 0.99f, 0.6f, 1.0f);
 		light3->m_col_specular = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		light3->m_param[0] = 200.0f;
 		light3->multiplyTransform(glm::translate(glm::vec3(0.0f, 0.0f, 15.0f)));
 
-		VELight *light2 = (VESpotLight *)getSceneManagerPointer()->createLight("StandardSpotLight", VELight::VE_LIGHT_TYPE_SPOT, camera);  
+		VELight *light2 = (VESpotLight *)getSceneManagerPointer()->createLight("StandardSpotLight", VELight::VE_LIGHT_TYPE_SPOT, camera);
 		light2->m_col_diffuse = glm::vec4(0.99f, 0.6f, 0.6f, 1.0f);
 		light2->m_col_specular = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		light2->m_param[0] = 200.0f;
 		light2->multiplyTransform(glm::translate(glm::vec3(5.0f, 0.0f, 0.0f)));
 		*/
 
-		registerEventListeners();	
+		registerEventListeners();
 	}
 
 

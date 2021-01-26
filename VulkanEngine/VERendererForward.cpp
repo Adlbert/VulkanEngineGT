@@ -480,22 +480,21 @@ namespace ve {
 		cv2.depthStencil = { 1.0f, 0 };
 		clearValuesLight.push_back(cv2);
 
-		VkViewport viewport_small{};
-		viewport_small.minDepth = 0.0f;
-		viewport_small.maxDepth = 1.0f;
-		viewport_small.x = (float)getWindowPointer()->getExtent().width - ((float)getWindowPointer()->getExtent().width / 5);
-		viewport_small.y = 0.0f;
-		viewport_small.width = (float)getWindowPointer()->getExtent().width / 5;
-		viewport_small.height = (float)getWindowPointer()->getExtent().height / 5;
-
-		VkViewport viewport{};
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = (float)getWindowPointer()->getExtent().width;
-		viewport.height = (float)getWindowPointer()->getExtent().height;
-		VkViewport viewports[] = { viewport , viewport_small };
+		VkViewport viewports[64];
+		
+		float a = 0;
+		for (int i = 0; i < 16; i++) {
+			float r = 25.0f;
+			a += 2 * glm::pi<float>() / 16;
+			VkViewport viewport{};
+			viewport.minDepth = 0.0f;
+			viewport.maxDepth = 1.0f;
+			viewport.x = r*glm::cos(a);
+			viewport.y = r * glm::sin(a);
+			viewport.width = (float)getWindowPointer()->getExtent().width;
+			viewport.height = (float)getWindowPointer()->getExtent().height;
+			viewports[i] = viewport;
+		}
 
 		//-----------------------------------------------------------------------------------------
 		//create a new primary command buffer and record all secondary buffers into it
@@ -514,18 +513,30 @@ namespace ve {
 
 			for (uint32_t j = 0; j < pLight->m_shadowCameras.size(); j++) {
 				vh::vhRenderBeginRenderPass(m_commandBuffers[m_imageIndex], m_renderPassShadow, m_shadowFramebuffers[m_imageIndex][j], clearValuesShadow, m_shadowMaps[0][j]->m_extent, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-				if(pLight->getName().find("Small") != std::string::npos)
-					vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewport_small);
-				else
-					vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewport);
+				if (pLight->getName().find("Ambient") != std::string::npos) {
+					int length = std::strlen("StandardAmbientLight");
+					int number = std::stoi(pLight->getName().substr(length, pLight->getName().size() - length).c_str());
+					vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewports[number]);
+				}
+				else {
+					int length = std::strlen("StandardDirLight");
+					int number = std::stoi(pLight->getName().substr(length, pLight->getName().size() - length).c_str());
+					vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewports[number]);
+				}
 				vkCmdExecuteCommands(m_commandBuffers[m_imageIndex], 1, &m_secondaryBuffers[m_imageIndex][bufferIdx++].buffer);
 				vkCmdEndRenderPass(m_commandBuffers[m_imageIndex]);
 			}
 			vh::vhRenderBeginRenderPass(m_commandBuffers[m_imageIndex], i == 0 ? m_renderPassClear : m_renderPassLoad, m_swapChainFramebuffers[m_imageIndex], clearValuesLight, m_swapChainExtent, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-			if (pLight->getName().find("Small") != std::string::npos)
-				vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewport_small);
-			else
-				vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewport);
+			if (pLight->getName().find("Ambient") != std::string::npos) {
+				int length = std::strlen("StandardAmbientLight");
+				int number = std::stoi(pLight->getName().substr(length, pLight->getName().size() - length).c_str());
+				vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewports[number]);
+			}
+			else {
+				int length = std::strlen("StandardDirLight");
+				int number = std::stoi(pLight->getName().substr(length, pLight->getName().size() - length).c_str());
+				vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewports[number]);
+			}
 			vkCmdExecuteCommands(m_commandBuffers[m_imageIndex], 1, &m_secondaryBuffers[m_imageIndex][bufferIdx++].buffer);
 			vkCmdEndRenderPass(m_commandBuffers[m_imageIndex]);
 
