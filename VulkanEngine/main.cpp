@@ -598,10 +598,10 @@ namespace ve {
 
 			//scene models
 
-			VESceneNode* sp1;
-			VECHECKPOINTER(sp1 = getSceneManagerPointer()->createSkybox("The Sky", "media/models/test/sky/cloudy",
-				{ "bluecloud_ft.jpg", "bluecloud_bk.jpg", "bluecloud_up.jpg",
-					"bluecloud_dn.jpg", "bluecloud_rt.jpg", "bluecloud_lf.jpg" }, pScene));
+			//VESceneNode* sp1;
+			//VECHECKPOINTER(sp1 = getSceneManagerPointer()->createSkybox("The Sky", "media/models/test/sky/cloudy",
+			//	{ "bluecloud_ft.jpg", "bluecloud_bk.jpg", "bluecloud_up.jpg",
+			//		"bluecloud_dn.jpg", "bluecloud_rt.jpg", "bluecloud_lf.jpg" }, pScene));
 
 			VESceneNode* e4;
 			VECHECKPOINTER(e4 = getSceneManagerPointer()->loadModel("The Plane", "media/models/test", "plane_t_n_s.obj", 0, pScene));
